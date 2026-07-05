@@ -63,6 +63,21 @@ reasoning behind each decision, not just the outcome.
 See `docs/ROADMAP.md` for the phased build plan and current status of
 each phase.
 
+## References
+
+- [zhsama/claude-sub-agent](https://github.com/zhsama/claude-sub-agent) —
+  a strongly recommended reference for this project's job. It implements a
+  similar multi-agent spec→build pipeline on top of Claude Code sub-agents
+  (orchestrator, quality gates, artifact handoff between phases). We
+  borrow patterns from it deliberately (see `docs/DECISIONS.md`) rather
+  than importing its structure wholesale — it's built for a professional
+  dev team, ours is built for a kid.
+- Beyond that one repo: actively search the web for other publicly shared
+  Claude Code agents/skills when designing a role. Multi-agent pipelines,
+  orchestration patterns, and individual agent/skill definitions are being
+  shared publicly and evolving quickly; checking what already exists
+  before designing a role from scratch is encouraged, not just tolerated.
+
 ## Audience note
 
 `README.md` describes the project for a human reader (what it is, why it

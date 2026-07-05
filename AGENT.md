@@ -60,6 +60,9 @@ collaboratively, one component at a time, in direct conversation with the
 project owner — see commit history and conversation record for the
 reasoning behind each decision, not just the outcome.
 
+See `docs/ROADMAP.md` for the phased build plan and current status of
+each phase.
+
 ## Audience note
 
 `README.md` describes the project for a human reader (what it is, why it

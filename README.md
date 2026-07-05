@@ -7,25 +7,35 @@ working, deployed application.
 
 ## The idea
 
-A non-technical person types something like *"make a game where a cat
-jumps over fences"* or *"make an app that tracks my allowance"*. From that
-one sentence, the environment behaves like a small software team and
-produces a real, working app, without the person ever needing to see or
-understand code.
+A non-technical person describes an app in plain Hebrew — that might be one
+sentence, like *"make a game where a cat jumps over fences"*, or a whole
+rambling story about what they want. From that description, the environment
+behaves like a small software team and produces a real, working app,
+without the person ever needing to see or understand code.
 
 ## How it works (planned)
 
 The pipeline mirrors the roles of a small software team, each backed by
-Claude Code agents and/or skills:
+its own Claude Code agent:
 
-1. **Requirements** — turn the plain-language description into a clear
-   product requirement.
-2. **Technical specification** — translate requirements into a concrete
-   technical plan: app type, stack, components.
-3. **Task breakdown** — split the spec into development and testing tasks.
-4. **Development + QA** — build and test the app in parallel.
-5. **Review and delivery** — a final check, then hand the person their app
-   (running locally and/or deployed to a shareable link).
+- **Translator** — a Hebrew ↔ English gate sitting on every exchange with
+  the kid, not just the initial idea, so the rest of the pipeline can work
+  in English while the kid always reads and writes Hebrew.
+- **Orchestrator** — coordinates the pipeline; doesn't build anything
+  itself, just decides what runs next.
+- **Intake** — turns the description into a clear requirement through an
+  interactive conversation: asking clarifying questions as concrete
+  multiple-choice-style options (always including a "you decide" choice),
+  not open-ended questions a kid would freeze on.
+- **Technical specification** — translates the requirement into a concrete
+  technical plan: app type, stack, components.
+- **Task breakdown** — splits the spec into development and testing tasks.
+- **Development + QA** — builds and tests the app, one after the other
+  with feedback loops rather than strictly one-shot.
+- **Review** — a final check against the original requirement before
+  anything is handed back.
+- **Delivery** — runs the app locally first; only deploys it to a
+  shareable link once the person explicitly confirms it's ready to share.
 
 The pipeline is intentionally generic: the same flow should be able to
 produce a 2D game, a small utility app, a tracker, or a form-based tool,

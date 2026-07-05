@@ -13,22 +13,31 @@ that job on behalf of the end user, generically, for any app idea.
 
 ## The mental model
 
-The studio behaves like a small software team. Each team role is meant to
-be represented by a Claude Code agent and/or skill:
+The studio behaves like a small software team. Each role is its own
+standalone Claude Code agent:
 
-- **Requirements** — turn a plain-language (possibly vague, possibly
-  childlike) description into a clear product requirement.
-- **Technical specification** — translate requirements into a technical
+- **Translator** — a Hebrew ↔ English gate sitting on every exchange with
+  the end user (not just the initial idea), so the rest of the pipeline
+  can work in English while the person only ever reads/writes Hebrew.
+- **Orchestrator** — coordinates the pipeline and enforces gates between
+  phases; builds nothing itself.
+- **Intake** — turns a plain-language (possibly vague, possibly a whole
+  rambling story) description into a clear product requirement, through an
+  interactive, multiple-choice-style conversation rather than a one-shot
+  guess.
+- **Technical specification** — translate the requirement into a technical
   plan: app type, stack, components.
 - **Task breakdown** — split the spec into concrete development and
   testing tasks.
-- **Development + QA** — build the app while testing/QA happens alongside
-  development, not strictly after it.
-- **Review and delivery** — a final check, then get the app into the end
-  user's hands (running locally and/or deployed to a shareable link).
+- **Development + QA** — build the app, with testing following in a
+  feedback loop rather than strictly a one-shot pass.
+- **Review** — a final check against the original requirement.
+- **Delivery** — run the app locally first; only deploy it to a shareable
+  link once the end user explicitly confirms it's ready to share.
 
 The exact agent/skill boundaries for these roles are still being designed
-and are not final. This file will be updated as those decisions are made.
+and are not final. See `docs/DECISIONS.md` for the reasoning behind each
+of the above and for open items we've deliberately parked.
 
 ## Design constraints agreed so far
 

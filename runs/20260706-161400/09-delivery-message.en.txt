@@ -1,0 +1,8 @@
+Great news! Your app is all done and live on the internet for everyone to see!
+
+It's a page that says "Hello!" with a big red button on it.
+
+Here's your link, ready to show off to your friends and family:
+https://sagigo.github.io/VibeStudioForKids/hello-button/
+
+Great job building this!

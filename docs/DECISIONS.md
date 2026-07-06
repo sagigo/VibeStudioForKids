@@ -60,6 +60,27 @@ Build and run the app locally first. Remote deployment (e.g. GitHub Pages)
 only happens after the person explicitly confirms the app is ready to
 share — nothing goes public without that sign-off.
 
+## Lessons from Phase 1 (thin end-to-end slice)
+
+- **Task scoping across gated stages:** the Task Planner stub scheduled a
+  testing task ("verify the deployed URL") that could not possibly pass at
+  QA time, because deployment is intentionally gated later in the
+  pipeline. QA correctly flagged it as not-yet-checkable rather than a
+  real failure; Review correctly excluded it from its verdict. Lesson for
+  Phase 5/6: task lists need to be aware of which pipeline stage they run
+  in, not just what "should eventually be true" — a task that can only be
+  verified after a later gate belongs to the stage after that gate.
+- **GitHub Pages via Actions needs two one-time, human-only steps** on a
+  fresh repo: (1) enabling Pages itself (Settings → Pages → Source →
+  GitHub Actions — `actions/configure-pages`'s `enablement: true` cannot
+  create the Pages site itself if the default `GITHUB_TOKEN` lacks
+  permission), and (2) allow-listing any non-default branch in the
+  auto-created `github-pages` environment's deployment branch policy
+  (Settings → Environments → github-pages), or deploys from a feature
+  branch are silently rejected before a runner even starts. Both are
+  one-time per repo, not per-deploy, but worth documenting since Phase 8
+  (full Delivery) will hit the same thing on any new repo.
+
 ## Parked (not decided, not urgent)
 
 Left as notes for a future round, not active open questions:

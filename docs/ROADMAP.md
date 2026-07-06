@@ -28,7 +28,15 @@ that says hello with a big red button"); real deployment to GitHub Pages;
 a working shareable link handed back. Also proves the Delivery gate
 mechanic — build locally, wait for explicit confirmation, then deploy —
 even though the "app" itself is trivial.
-**Status:** Not started — next up.
+**Status:** Done. `/studio-build` Skill + one standalone agent per role
+(`.claude/agents/`) built and run end to end for the fixed toy request;
+QA/Review passed; human confirmed at the Delivery gate; deployed for real
+via a GitHub Actions workflow to GitHub Pages —
+https://sagigo.github.io/VibeStudioForKids/hello-button/. Lessons that
+surfaced (see `docs/DECISIONS.md`): a Task Planner task tried to verify
+the deployed URL before deployment was gated to happen, and the
+auto-created `github-pages` environment's deployment-branch policy
+blocked a non-default branch until manually allow-listed.
 
 ## Phase 2 — Translator
 **Goal:** a real Hebrew ↔ English gate on every kid-facing exchange.

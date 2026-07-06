@@ -1,0 +1,3 @@
+# Dev notes
+
+Built a single self-contained static page at `apps/hello-button/index.html` that satisfies the requirement exactly: it displays "Hello!" as a large heading and one big, round, red button labeled "Press Me!" below it, centered on a soft pastel gradient background. All styling is inline `<style>` CSS in the same file - no external stylesheets, scripts, fonts, build step, or backend of any kind, matching the tech spec (plain HTML/inline CSS, static file(s) for GitHub Pages, no storage or interactivity). The button has no click handler, as none was required by the acceptance criteria. File path: `apps/hello-button/index.html`.

@@ -43,7 +43,14 @@ blocked a non-default branch until manually allow-listed.
 **Why now:** every later role that talks to the kid (starting with
 Intake) depends on it; cheaper to build once and reuse than bolt on after
 Intake exists.
-**Status:** Not started
+**Status:** Done. `.claude/agents/translator.md` hardened for messy real
+kid input (typos, rambling, mixed Hebrew/English) rather than just the one
+fixed Phase 1 phrase, validated against several varied cases. Added a
+light content-safety screen on kid-authored input as its own dedicated
+`safety-check` agent run before Translator (see `docs/DECISIONS.md` for
+why it's a separate agent, not a mode of Translator). `studio-build`
+updated to call `safety-check` before `translator` on the way in, and halt
+the pipeline rather than proceed to Intake if flagged.
 
 ## Phase 3 — Intake (interactive)
 **Goal:** the real requirements-gathering conversation — clarifying

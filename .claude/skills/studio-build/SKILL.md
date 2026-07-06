@@ -33,50 +33,56 @@ Invoke the `orchestrator` agent (foreground) with the run directory path.
 It writes `runs/<run-id>/plan.json` confirming the stage order and gate
 placement. Read it back before continuing.
 
-## 2. Translator (in)
+## 2. Safety check, then Translator (in)
 
-Invoke the `translator` agent: input `00-request.he.txt`, direction
-`he->en`, output `runs/<run-id>/01-request.en.txt`.
+Invoke the `safety-check` agent: input `00-request.he.txt`, output
+`runs/<run-id>/01-check.json`. Read the result. If `flagged` is `true`,
+stop the pipeline immediately, do not continue to Intake, and surface the
+flag (and its reason) to the end user rather than the kid.
+
+Only if `flagged` is `false`, invoke the `translator` agent: input
+`00-request.he.txt`, direction `he->en`, output
+`runs/<run-id>/02-request.en.txt`.
 
 ## 3. Intake
 
-Invoke the `intake` agent: input `01-request.en.txt`, output
-`runs/<run-id>/02-requirement.md`.
+Invoke the `intake` agent: input `02-request.en.txt`, output
+`runs/<run-id>/03-requirement.md`.
 
 ## 4. Tech Spec
 
-Invoke the `tech-spec` agent: input `02-requirement.md`, output
-`runs/<run-id>/03-tech-spec.md`.
+Invoke the `tech-spec` agent: input `03-requirement.md`, output
+`runs/<run-id>/04-tech-spec.md`.
 
 ## 5. Task Planner
 
-Invoke the `task-planner` agent: input `03-tech-spec.md`, output
-`runs/<run-id>/04-tasks.md`.
+Invoke the `task-planner` agent: input `04-tech-spec.md`, output
+`runs/<run-id>/05-tasks.md`.
 
 ## 6. Developer
 
-Invoke the `developer` agent: inputs `03-tech-spec.md` and `04-tasks.md`,
+Invoke the `developer` agent: inputs `04-tech-spec.md` and `05-tasks.md`,
 target app directory `apps/hello-button/`, and have it write
-`runs/<run-id>/05-dev-notes.md`.
+`runs/<run-id>/06-dev-notes.md`.
 
 ## 7. QA
 
-Invoke the `qa` agent: inputs `04-tasks.md` and the app directory, output
-`runs/<run-id>/06-qa-report.md`. If it fails, stop and report to the user
+Invoke the `qa` agent: inputs `05-tasks.md` and the app directory, output
+`runs/<run-id>/07-qa-report.md`. If it fails, stop and report to the user
 rather than continuing (Phase 1 has no dev/QA retry loop yet - that's
 Phase 6).
 
 ## 8. Reviewer
 
-Invoke the `reviewer` agent: inputs `02-requirement.md`, `06-qa-report.md`,
-and the app directory, output `runs/<run-id>/07-review.md`. If it fails,
+Invoke the `reviewer` agent: inputs `03-requirement.md`, `07-qa-report.md`,
+and the app directory, output `runs/<run-id>/08-review.md`. If it fails,
 stop and report to the user.
 
 ## 9. Delivery - stage 1 (local)
 
 Invoke the `delivery` agent (stage 1 / local build report): inputs
-`07-review.md` and the app directory, output
-`runs/<run-id>/08-delivery-local.md`.
+`08-review.md` and the app directory, output
+`runs/<run-id>/09-delivery-local.md`.
 
 ## 10. The gate - stop and ask
 
@@ -108,11 +114,12 @@ conversation, where the user can see exactly what's being pushed:
 ## 12. Delivery - stage 2 (hand-back message)
 
 Invoke the `delivery` agent again (stage 2 / hand-back message) with the
-real live URL, output `runs/<run-id>/09-delivery-message.en.txt`.
+real live URL, output `runs/<run-id>/10-delivery-message.en.txt`.
 
 ## 13. Translator (out)
 
-Invoke the `translator` agent: input `09-delivery-message.en.txt`,
-direction `en->he`, output `runs/<run-id>/10-message.he.txt`. Show this
-final Hebrew message, and the live link, to the user as the last thing you
-do.
+Invoke the `translator` agent: input `10-delivery-message.en.txt`,
+direction `en->he`, output `runs/<run-id>/11-message.he.txt`. (No
+safety-check step here - that screen only applies to kid-authored input,
+not to the studio's own outgoing messages.) Show this final Hebrew
+message, and the live link, to the user as the last thing you do.

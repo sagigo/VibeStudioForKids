@@ -16,6 +16,10 @@ default.
   kid-facing exchange (not just the initial idea): Hebrew → English for
   the rest of the pipeline to work with, English → Hebrew for anything
   shown back to the kid, including Intake's clarifying questions.
+- **Safety check** — cross-cutting, sits in front of Translator on
+  kid-authored input only. A light, conservative screen for content that
+  needs adult attention (see Phase 2 lesson below for why it's a separate
+  agent rather than folded into Translator).
 - **Orchestrator** — coordinates phase transitions and gate decisions;
   builds nothing itself.
 - **Intake** — plain description → clear requirement, interactively.
@@ -80,6 +84,25 @@ share — nothing goes public without that sign-off.
   branch are silently rejected before a runner even starts. Both are
   one-time per repo, not per-deploy, but worth documenting since Phase 8
   (full Delivery) will hit the same thing on any new repo.
+
+## Lessons from Phase 2 (Translator, real)
+
+- **A safety check cannot share a call with the job it's guarding.** The
+  first attempt put a "screen this input, then translate it" instruction
+  in one Translator call. Even with an explicit mandatory checklist, real
+  PII (a phone number + home address) was translated straight through,
+  silently, twice in a row - the "translate faithfully" instruction won
+  every time. Splitting it into two *mode sections within the same agent
+  file* wasn't enough either: with both sections still in context on every
+  call, a "nothing flagged" check call sometimes went ahead and wrote a
+  full translation instead of the expected `{"flagged": false}`. What
+  actually worked: two entirely separate agent files (`safety-check.md`
+  and `translator.md`), each with only its own single-purpose instructions
+  and no knowledge of the other job existing at all. Lesson for every
+  future gate/check that sits in front of a "do the task" role (QA before
+  Developer, Reviewer before Delivery, etc.): a check and the thing it's
+  checking should not be able to see each other's instructions in the same
+  context, not just be dispatched via a mode flag inside one prompt.
 
 ## Parked (not decided, not urgent)
 

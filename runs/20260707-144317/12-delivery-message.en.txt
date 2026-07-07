@@ -1,0 +1,7 @@
+Your game is ready to play!
+
+You built a coin-collecting runner game! Run, grab as many coins as you can, and jump over the obstacles in your way. Here's the cool trick: hold down the spacebar to charge up your jump, then let go to release it — the longer you hold, the higher you jump!
+
+Play it here: https://sagigo.github.io/VibeStudioForKids/coin-jump-runner/
+
+Have fun, and see how many coins you can collect!

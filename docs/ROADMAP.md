@@ -57,7 +57,19 @@ the pipeline rather than proceed to Intake if flagged.
 questions posed as concrete, multiple-choice-style options, proactive
 surfacing of choices the kid may not have considered, and a "you decide"
 fallback that resolves to a reasonable default.
-**Status:** Not started
+**Status:** Done. `intake.md` rewritten as a stateless per-call decision
+agent (ask next question, or finalize) after discovering `AskUserQuestion`
+is unavailable inside subagents - `studio-build` drives the actual
+back-and-forth (translate question → ask → translate answer → call Intake
+again). Unit-tested against 5 synthetic transcripts covering vague/clear
+ideas, "surprise me" vs. "let's decide together", and the finalize path.
+Validated with one real live session: a kid-typed idea for a
+charge-and-release-jump coin-collecting runner game, including the kid
+explicitly saying "don't ask me any more questions" mid-idea, which Intake
+correctly honored. Ran the resulting requirement through the full existing
+pipeline (a real, non-trivial app, not Phase 1's static page) and deployed
+it for real: https://sagigo.github.io/VibeStudioForKids/coin-jump-runner/.
+Two more real bugs found and fixed along the way - see `docs/DECISIONS.md`.
 
 ## Phase 4 — Technical Specification
 **Goal:** turn a requirement into a concrete technical plan (app type,

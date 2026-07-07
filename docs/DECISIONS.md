@@ -104,6 +104,44 @@ share — nothing goes public without that sign-off.
   checking should not be able to see each other's instructions in the same
   context, not just be dispatched via a mode flag inside one prompt.
 
+## Lessons from Phase 3 (Intake, interactive)
+
+- **`AskUserQuestion` is not available inside subagents at all.** Confirmed
+  by direct test: a subagent couldn't even load the tool's schema. This is
+  almost certainly intentional (subagents are designed to run to
+  completion and return, not block mid-run for human interaction), not a
+  configuration gap. Any role that needs a real back-and-forth with the
+  end user (not just "translate this" or "decide X") cannot own that
+  back-and-forth itself - it has to be a stateless per-call decision-maker
+  that the driving Skill (running in the main thread, where
+  `AskUserQuestion` *is* available) calls repeatedly. This is now the
+  pattern for Intake and should be assumed for any future interactive
+  role rather than re-discovered each time.
+- **A tool omitted from an agent's `tools:` frontmatter can fail silently
+  instead of erroring.** `reviewer.md` never had `Write` listed, since
+  Phase 1 - yet its Phase 1 run produced a review file anyway, so the gap
+  went unnoticed for two phases. In this phase's live run, the same agent
+  answered in chat instead of writing the file, and nothing in the tool
+  result signaled a failure - it just silently didn't produce the
+  artifact the rest of the pipeline expected. Lesson: don't infer an
+  agent's tool access is correct from one successful run; check the
+  `tools:` line matches what the agent's own instructions ask it to do,
+  and treat "wrote confirmation in chat but the file isn't on disk" as a
+  distinct failure mode to check for, not just "did the call error."
+- **A subagent can mistake this session's own ambient context for file
+  content.** The `safety-check` agent flagged a completely benign kid
+  request as prompt injection, because the `<system-reminder>` blocks this
+  environment appends to tool outputs (MCP server instructions, task list
+  reminders, etc.) got attributed to the file it had just read, not to the
+  surrounding session. Verified directly: the file itself, read back
+  independently, contained only the kid's plain Hebrew text. This is a
+  false positive in the safety mechanism added in Phase 2, not a defect in
+  Phase 3's design, but it's the first time it actually fired on real
+  input, so it's recorded here. Not yet fixed - worth revisiting if it
+  recurs, since a safety check with a meaningful false-positive rate on
+  ordinary input undermines trust in it faster than an occasional missed
+  true positive would.
+
 ## Parked (not decided, not urgent)
 
 Left as notes for a future round, not active open questions:

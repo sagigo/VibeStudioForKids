@@ -90,7 +90,18 @@ well-justified static-only redesigns where they were.
 ## Phase 5 — Task Planner
 **Goal:** split a spec into a concrete list of development and testing
 tasks.
-**Status:** Not started
+**Status:** Done. `task-planner.md` now maps development tasks directly to
+Tech Spec's `Components`/`Storage` structure (data model before things that
+read/write it, foundational mechanics before things that depend on them),
+respects `Scope adjustments` when present (builds the static-only version,
+not the original ask), and keeps testing tasks scoped to what QA can
+actually check today (static code inspection) - explicitly forbidding
+tasks that depend on a later pipeline stage (the Phase 1 "verify the
+deployed URL" mistake). Tested against 3 varied tech specs (storage-backed
+tracker, scope-adjusted leaderboard, multi-mechanic game) - correct
+dependency ordering and component mapping in all three, and the
+scope-adjusted case even added a task verifying no network code sneaks
+in, reinforcing Tech Spec's own scope-down decision.
 
 ## Phase 6 — Development + QA
 **Goal:** real implementation and testing — sequential, with a bounded

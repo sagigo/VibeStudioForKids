@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: Final pass/fail-with-reason check of the built app against the original requirement, before anything reaches Delivery.
-tools: Read, Glob
+tools: Read, Glob, Write
 model: sonnet
 ---
 

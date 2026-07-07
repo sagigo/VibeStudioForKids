@@ -137,9 +137,11 @@ attempt number as you go.
 
 ## 10. Reviewer
 
-Invoke the `reviewer` agent: inputs `04-requirement.md`, `08-qa-report.md`,
-and the app directory, output `runs/<run-id>/09-review.md`. If it fails,
-stop and report to the user.
+Invoke the `reviewer` agent: inputs `04-requirement.md`, `05-tech-spec.md`
+(so it can see any `Scope adjustments` and judge against the adjusted
+scope, not blindly the original ask), `08-qa-report.md`, and the app
+directory, output `runs/<run-id>/09-review.md`. If it fails, stop and
+report to the user.
 
 ## 11. Delivery - stage 1 (local)
 

@@ -122,7 +122,19 @@ the same live interaction, not a rubber stamp.
 ## Phase 7 — Reviewer
 **Goal:** a final pass/fail-with-reason check against the original
 requirement before anything reaches Delivery.
-**Status:** Not started
+**Status:** Done. Found and fixed a real integration gap while deepening
+this: Reviewer previously only saw the original requirement, with no way
+to know Tech Spec (Phase 4) had legitimately scoped down a request - it
+would have wrongly failed a correctly-adjusted app for not doing something
+Tech Spec already explained why it wasn't building. `reviewer.md` now also
+reads the tech spec and judges against the adjusted scope when a `Scope
+adjustments` section is present, without re-litigating that decision.
+Tested across 3 scenarios: no adjustment + genuine gap -> correctly
+FAILed; adjustment present + incomplete build -> correctly FAILed, for
+real reasons unrelated to the adjustment (didn't let the adjustment become
+a blanket excuse); adjustment present + complete faithful build ->
+correctly PASSed. Also independently caught a QA-report/actual-app
+mismatch in one test fixture that wasn't even the thing being tested for.
 
 ## Phase 8 — Delivery (full)
 **Goal:** replace Phase 1's stub with the real thing — local build/run,

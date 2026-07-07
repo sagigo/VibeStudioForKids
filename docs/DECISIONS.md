@@ -53,6 +53,17 @@ what QA flagged as broken and leaves everything else untouched, rather than
 regenerating the app from scratch each retry. A full rewrite each cycle
 risks reintroducing bugs in parts that already passed QA.
 
+### Reviewer judges against Tech Spec's adjusted scope, not blindly the original ask
+Found while deepening Phase 7: Reviewer only ever saw the original
+requirement, with no visibility into Tech Spec's `Scope adjustments` (see
+the Phase 4 decision above). It would have wrongly failed a correctly
+scoped-down app for not doing something Tech Spec already explained it
+wasn't building. Reviewer now also reads the tech spec and judges against
+the adjusted scope when present - confirmed by testing that this doesn't
+turn Reviewer into a rubber stamp: an incomplete build with a legitimate
+scope adjustment still correctly failed, for real gaps unrelated to the
+adjustment itself.
+
 ### Orchestrator is a standalone agent
 It routes work and enforces gates between phases; it does not do any of
 the phases' work itself.

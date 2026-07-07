@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Coin Jump Runner</title>
+<title>קפיצה למטבעות</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -33,7 +33,7 @@
   .hud {
     position: absolute;
     top: 14px;
-    left: 16px;
+    right: 16px;
     font-size: clamp(18px, 4vw, 28px);
     font-weight: bold;
     color: #ffffff;
@@ -55,7 +55,7 @@
   .charge-meter-wrap {
     position: absolute;
     top: 14px;
-    right: 16px;
+    left: 16px;
     width: clamp(90px, 24vw, 160px);
     height: 16px;
     background: rgba(255,255,255,0.35);
@@ -71,8 +71,8 @@
   .charge-meter-fill {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #ffe066, #ff9f43, #ff6b6b);
-    border-radius: 8px 0 0 8px;
+    background: linear-gradient(270deg, #ffe066, #ff9f43, #ff6b6b);
+    border-radius: 0 8px 8px 0;
   }
   .overlay {
     position: absolute;
@@ -153,21 +153,21 @@
 
   <div class="overlay" id="start-overlay">
     <div class="panel">
-      <h1>Coin Jump Runner!</h1>
-      <p>Your buddy runs by itself &mdash; you just make it jump!</p>
-      <p><strong>Hold</strong> the button (or SPACE) to charge a jump.<br><strong>Let go</strong> to leap &mdash; the longer you hold, the higher you fly!</p>
-      <p>Grab shiny coins and hop over rocks and pits.</p>
-      <button class="btn" id="start-btn">Tap to Start</button>
-      <div class="hint">Works with keyboard, mouse, or touch</div>
+      <h1>קפיצה למטבעות!</h1>
+      <p>החבר שלך רץ לבד &mdash; אתם רק צריכים לגרום לו לקפוץ!</p>
+      <p><strong>לחצו והחזיקו</strong> על הכפתור (או על מקש הרווח) כדי לטעון קפיצה.<br><strong>שחררו</strong> כדי לקפוץ &mdash; ככל שתחזיקו זמן רב יותר, כך תקפצו גבוה יותר!</p>
+      <p>אספו מטבעות נוצצים וקפצו מעל סלעים ובורות.</p>
+      <button class="btn" id="start-btn">הקישו כדי להתחיל</button>
+      <div class="hint">עובד עם מקלדת, עכבר או מגע</div>
     </div>
   </div>
 
   <div class="overlay hidden" id="gameover-overlay">
     <div class="panel">
-      <h1>Oops!</h1>
-      <p id="gameover-reason">You took a tumble.</p>
-      <div class="score-line">Coins collected: <span id="final-score">0</span></div>
-      <button class="btn" id="restart-btn">Play Again</button>
+      <h1>אופס!</h1>
+      <p id="gameover-reason">נפלתם ונתקלתם.</p>
+      <div class="score-line">מטבעות שנאספו: <span id="final-score">0</span></div>
+      <button class="btn" id="restart-btn">שחקו שוב</button>
     </div>
   </div>
 </div>
@@ -456,7 +456,7 @@
     }
 
     if (player.y > H + 80) {
-      endGame('You fell into a pit!');
+      endGame('נפלתם לתוך בור!');
       return;
     }
 
@@ -470,7 +470,7 @@
       var oRect = { x: sx, y: groundY - o.height, w: o.width, h: o.height };
       if (pRect.x < oRect.x + oRect.w && pRect.x + pRect.w > oRect.x &&
           pRect.y < oRect.y + oRect.h && pRect.y + pRect.h > oRect.y) {
-        endGame('You bumped into a rock!');
+        endGame('התנגשתם בסלע!');
         return;
       }
     }

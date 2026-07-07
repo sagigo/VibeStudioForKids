@@ -136,11 +136,36 @@ share — nothing goes public without that sign-off.
   surrounding session. Verified directly: the file itself, read back
   independently, contained only the kid's plain Hebrew text. This is a
   false positive in the safety mechanism added in Phase 2, not a defect in
-  Phase 3's design, but it's the first time it actually fired on real
-  input, so it's recorded here. Not yet fixed - worth revisiting if it
-  recurs, since a safety check with a meaningful false-positive rate on
-  ordinary input undermines trust in it faster than an occasional missed
-  true positive would.
+  Phase 3's design. Addressed (not just noted) in the language-generalization
+  pass right after: `safety-check.md` now explicitly distinguishes the
+  kid's actual message from this session's own ambient tool-output
+  scaffolding, and says to re-read the file in isolation when unsure. Not
+  re-tested against the exact case that triggered it - worth confirming it
+  actually holds next time real input goes through it.
+
+## Post-Phase-3 fix: the deployed app's own UI was never localized
+
+The pipeline translated every *conversational* kid-facing exchange
+(questions, the final hand-back message) but never the app it actually
+built - Developer worked purely from English requirement/tech-spec
+artifacts and had no reason to write anything but English into the app
+itself. The first real live run (Phase 3's coin-collecting game) shipped
+with an English-language UI to a kid who'd typed their idea in Hebrew.
+Caught by inspection after the fact, not by any QA/Review check - neither
+role had "is the UI in the kid's language" on its list, because nothing
+upstream told them what language to check against.
+
+Decided (user's explicit call, not the simpler option): rather than
+hardcoding the UI language to Hebrew to match the studio's current
+single-language assumption, generalize Translator to detect whatever
+language the kid actually uses. `detect->en` replaces the fixed `he->en`
+direction (writing a `.lang.json` sidecar with the detected language and
+whether it's RTL), `en-><lang>` replaces the fixed `en->he` direction, and
+that detected language is threaded through the whole run - including into
+Developer, which now must write all kid-visible UI text (not code/comments)
+in that language, with correct `dir="rtl"` layout when applicable, not just
+mirrored text. Retrofitted the already-deployed coin-jump-runner app to
+prove the fix works on a real, previously-English UI, not just new builds.
 
 ## Parked (not decided, not urgent)
 

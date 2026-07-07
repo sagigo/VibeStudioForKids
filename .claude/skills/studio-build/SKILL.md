@@ -1,15 +1,20 @@
 ---
 name: studio-build
-description: Vibe Studio for Kids - main entry point. Asks the kid what they want to build (in Hebrew), runs a real interactive Intake conversation to clarify it, then the rest of the pipeline (Tech Spec -> Task Planner -> Developer -> QA -> Reviewer -> Delivery), pausing at the Delivery gate for the end user's explicit go-ahead before anything is deployed publicly to GitHub Pages.
+description: Vibe Studio for Kids - main entry point. Asks the kid what they want to build, in whatever language they use, runs a real interactive Intake conversation to clarify it, then the rest of the pipeline (Tech Spec -> Task Planner -> Developer -> QA -> Reviewer -> Delivery), pausing at the Delivery gate for the end user's explicit go-ahead before anything is deployed publicly to GitHub Pages.
 ---
 
 # Studio build
 
 This is the studio's entry point. Every role below is a real, standalone
-agent (see `.claude/agents/`); Tech Spec, Task Planner, Developer, QA,
-Reviewer and Delivery are still Phase 1-level stubs (deepened in later
-phases), but Translator, the safety screen, and Intake are real as of
-Phase 2/3. Follow these steps in order.
+agent (see `.claude/agents/`); Tech Spec, Task Planner, QA, Reviewer and
+Delivery are still Phase 1-level stubs (deepened in later phases), but
+Translator, the safety screen, Intake, and Developer's UI-localization are
+real. Follow these steps in order.
+
+The studio doesn't assume the kid's language - Translator detects it from
+their first message and that detected language is used for everything
+kid-facing for the rest of the run, including the deployed app's own UI
+text.
 
 ## 0. Set up the run
 
@@ -24,24 +29,32 @@ back before continuing.
 
 ## 2. Ask the kid what they want to build
 
+The studio doesn't know the kid's language yet at this point, so greet in
+Hebrew (today's primary audience) as a reasonable starting default, but
+don't assume the reply will match - step 3 detects the real language from
+whatever they actually send back and that's what's used from then on.
 Compose a short, warm English prompt (e.g. "Hi! What would you like to
-build today? Tell me a bit about your idea."). Invoke the `translator`
-agent (en->he) to translate it, then show the Hebrew text to the user as
-a normal message and wait for their reply - this is an ordinary
-conversation turn, not `AskUserQuestion` (the idea itself is open-ended,
-so it can't be multiple-choice). Save their raw reply to
-`runs/<run-id>/00-request.he.txt`.
+build today? Tell me a bit about your idea."), invoke the `translator`
+agent (direction `en->Hebrew`) to translate it, then show that text to the
+user as a normal message and wait for their reply - this is an ordinary
+conversation turn, not `AskUserQuestion` (the idea itself is open-ended, so
+it can't be multiple-choice). Save their raw reply to
+`runs/<run-id>/00-request.txt`.
 
-## 3. Safety check, then Translator (in)
+## 3. Safety check, then Translator (in) - detects the kid's language
 
-Invoke the `safety-check` agent: input `00-request.he.txt`, output
+Invoke the `safety-check` agent: input `00-request.txt`, output
 `runs/<run-id>/01-check.json`. If `flagged` is `true`, stop the pipeline
 immediately, do not continue to Intake, and surface the flag (and its
 reason) to the end user rather than the kid.
 
 Only if `flagged` is `false`, invoke the `translator` agent: input
-`00-request.he.txt`, direction `he->en`, output
-`runs/<run-id>/02-request.en.txt`.
+`00-request.txt`, direction `detect->en`, output
+`runs/<run-id>/02-request.en.txt`. Read the sidecar
+`02-request.en.txt.lang.json` it writes (`language_code`, `language_name`,
+`rtl`) - this is the kid's language for the rest of the run. Keep it
+handy; you'll pass it to `translator` (as the `en-><lang>` target) and to
+`developer` for the rest of this run.
 
 ## 4. Interactive Intake loop
 
@@ -60,17 +73,19 @@ kid.
    `03-transcript.json` - Intake never writes to it, only reads it; you
    update it yourself in step 3 below after each answer.
 3. If the decision is `"done": false`: translate the question and its
-   options to Hebrew (one `translator` call covering the whole question +
-   options together, so phrasing stays coherent), then call
-   `AskUserQuestion` with that Hebrew question and those Hebrew options.
-   - If the kid picks one of Intake's given options: translate their
-     chosen option's label back to English (or just reuse the English
+   options into the kid's language (one `translator` call, direction
+   `en-><kid's language>`, covering the whole question + options together
+   so phrasing stays coherent), then call `AskUserQuestion` with that
+   translated question and those translated options.
+   - If the kid picks one of Intake's given options: reuse the English
      label you already have for that option - no need to re-translate
-     something you already know in English).
+     something you already know in English.
    - If the kid types a free-text "Other" answer: run the `safety-check`
      agent on it first, exactly like step 3's initial check. If flagged,
-     stop the pipeline the same way. If clear, invoke `translator` (he->en)
-     on it.
+     stop the pipeline the same way. If clear, invoke `translator`
+     (direction `detect->en` - reuse the earlier detected language rather
+     than trusting a fresh detection on a short answer, unless the kid
+     clearly switched languages) on it.
    - Append `{"question": "<English question>", "answer": "<English
      answer>"}` to `qa_history` in `03-transcript.json`, and go back to
      step 2.
@@ -89,16 +104,20 @@ Invoke the `task-planner` agent: input `05-tech-spec.md`, output
 
 ## 7. Pick an app slug
 
-Derive a short, readable, lowercase-hyphenated slug (2-4 words) from the
-requirement's Summary line, e.g. `pet-feeding-tracker`. Check `apps/` for
-a collision and adjust if needed. Target app directory is
-`apps/<slug>/`.
+Derive a short, readable, lowercase-hyphenated slug (2-4 words, in
+English regardless of the kid's language - it's a URL path, not
+kid-facing text) from the requirement's Summary line, e.g.
+`pet-feeding-tracker`. Check `apps/` for a collision and adjust if needed.
+Target app directory is `apps/<slug>/`.
 
 ## 8. Developer
 
 Invoke the `developer` agent: inputs `05-tech-spec.md` and `06-tasks.md`,
-target app directory `apps/<slug>/`, and have it write
-`runs/<run-id>/07-dev-notes.md`.
+target app directory `apps/<slug>/`, the kid's language and its `rtl` flag
+(from step 3's sidecar), and have it write `runs/<run-id>/07-dev-notes.md`.
+All UI text the kid will see in the deployed app must be in the kid's
+language, not English - this is Developer's job now, not a separate
+localization pass.
 
 ## 9. QA
 
@@ -154,6 +173,6 @@ real live URL, output `runs/<run-id>/11-delivery-message.en.txt`.
 ## 15. Translator (out)
 
 Invoke the `translator` agent: input `11-delivery-message.en.txt`,
-direction `en->he`, output `runs/<run-id>/12-message.he.txt`. Show this
-final Hebrew message, and the live link, to the user as the last thing you
-do.
+direction `en-><kid's language>`, output `runs/<run-id>/12-message.txt`.
+Show this final message, and the live link, to the user as the last thing
+you do.

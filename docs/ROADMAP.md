@@ -75,7 +75,17 @@ Two more real bugs found and fixed along the way - see `docs/DECISIONS.md`.
 **Goal:** turn a requirement into a concrete technical plan (app type,
 stack, storage needs) using generic judgment rather than per-app-type
 hardcoding.
-**Status:** Not started
+**Status:** Done. `tech-spec.md` deepened with a `Components` breakdown and
+a concrete `Storage` data model (proportional - skipped when trivial), and
+explicit handling for requirements that imply something GitHub Pages'
+static-only hosting can't do (a server, accounts, real-time cross-device
+sync): designs the closest static-only equivalent and states the tradeoff
+in a `Scope adjustments` section rather than silently building something
+different from what was asked. Tested across 4 varied requirement types
+(a storage-backed chore tracker, a game, and two requests implying a
+server - a shared leaderboard and real-time chat) - correctly skipped
+scope adjustments where none were needed and applied them with sensible,
+well-justified static-only redesigns where they were.
 
 ## Phase 5 — Task Planner
 **Goal:** split a spec into a concrete list of development and testing

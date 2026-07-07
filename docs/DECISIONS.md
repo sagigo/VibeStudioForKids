@@ -64,6 +64,18 @@ Build and run the app locally first. Remote deployment (e.g. GitHub Pages)
 only happens after the person explicitly confirms the app is ready to
 share — nothing goes public without that sign-off.
 
+### Requests needing a server get a static-only equivalent, not a dead end
+Static GitHub Pages hosting can't do a server, a database, accounts, or
+real-time sync between different people's devices. When a kid's idea
+implies one of these (a live shared leaderboard, real-time chat with a
+friend), Tech Spec doesn't stop and refuse, and doesn't silently build
+something different from what was asked either - it designs the closest
+static-only equivalent (e.g. a local-device leaderboard, a shared-screen
+pass-the-device chat) and states the substitution explicitly in a "Scope
+adjustments" section, so it's visible to Review and the end user rather
+than a quiet downgrade. Revisit if/when a real backend ever becomes a
+supported delivery target.
+
 ## Lessons from Phase 1 (thin end-to-end slice)
 
 - **Task scoping across gated stages:** the Task Planner stub scheduled a

@@ -6,10 +6,10 @@ description: Vibe Studio for Kids - main entry point. Asks the kid what they wan
 # Studio build
 
 This is the studio's entry point. Every role below is a real, standalone
-agent (see `.claude/agents/`); Tech Spec, Task Planner, QA, Reviewer and
-Delivery are still Phase 1-level stubs (deepened in later phases), but
-Translator, the safety screen, Intake, and Developer's UI-localization are
-real. Follow these steps in order.
+agent (see `.claude/agents/`); Reviewer and Delivery are still Phase
+1-level stubs (deepened in later phases). Translator, the safety screen,
+Intake, Tech Spec, Task Planner, and Development + QA's bounded retry loop
+are real. Follow these steps in order.
 
 The studio doesn't assume the kid's language - Translator detects it from
 their first message and that detected language is used for everything
@@ -110,20 +110,30 @@ kid-facing text) from the requirement's Summary line, e.g.
 `pet-feeding-tracker`. Check `apps/` for a collision and adjust if needed.
 Target app directory is `apps/<slug>/`.
 
-## 8. Developer
+## 8-9. Development + QA - bounded retry loop
 
-Invoke the `developer` agent: inputs `05-tech-spec.md` and `06-tasks.md`,
-target app directory `apps/<slug>/`, the kid's language and its `rtl` flag
-(from step 3's sidecar), and have it write `runs/<run-id>/07-dev-notes.md`.
-All UI text the kid will see in the deployed app must be in the kid's
-language, not English - this is Developer's job now, not a separate
-localization pass.
+Up to 4 total Developer attempts (1 build + up to 3 fix cycles). Track the
+attempt number as you go.
 
-## 9. QA
-
-Invoke the `qa` agent: inputs `06-tasks.md` and the app directory, output
-`runs/<run-id>/08-qa-report.md`. If it fails, stop and report to the user
-rather than continuing (no dev/QA retry loop yet - that's Phase 6).
+1. **Attempt 1 (build mode):** invoke the `developer` agent, mode `build`:
+   inputs `05-tech-spec.md` and `06-tasks.md`, target app directory
+   `apps/<slug>/`, the kid's language and its `rtl` flag (from step 3's
+   sidecar), and have it write `runs/<run-id>/07-dev-notes.md`. All UI
+   text the kid will see must be in the kid's language, not English - this
+   is Developer's job, not a separate localization pass.
+2. Invoke the `qa` agent: inputs `06-tasks.md` and the app directory,
+   output `runs/<run-id>/08-qa-report-<attempt>.md` (one file per attempt,
+   so the history isn't overwritten - e.g. `08-qa-report-1.md`).
+3. If QA's overall verdict is PASS, continue to step 10 (Reviewer), using
+   this attempt's QA report as `08-qa-report.md` (copy or reference the
+   winning attempt's file under that name, since later steps expect it).
+4. If FAIL and attempts remain (fewer than 4 total so far): invoke
+   `developer` again, mode `fix` - same inputs as attempt 1, plus this
+   attempt's QA report path. Go back to step 2 for the next attempt.
+5. If FAIL on the 4th attempt: stop the pipeline here. Do not continue to
+   Reviewer or Delivery. Report to the end user what was tried, what's
+   still failing (from the last QA report), and that it needs human
+   attention - this is a real, bounded give-up, not a silent failure.
 
 ## 10. Reviewer
 

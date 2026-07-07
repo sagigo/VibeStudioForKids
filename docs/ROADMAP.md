@@ -106,7 +106,18 @@ in, reinforcing Tech Spec's own scope-down decision.
 ## Phase 6 — Development + QA
 **Goal:** real implementation and testing — sequential, with a bounded
 feedback/retry loop between them (see `docs/DECISIONS.md`).
-**Status:** Not started
+**Status:** Done. QA upgraded from static-inspection-only to real live
+browser testing (headless Chromium via Playwright) for interactive/
+behavioral claims, keeping static inspection only for structural/absence
+claims it's actually better suited to. Developer gained a `fix` mode for
+targeted, QA-report-driven fixes instead of full rewrites. `studio-build`
+now runs a bounded retry loop (1 build + up to 3 fix cycles, 4 attempts
+total - user's explicit choice) between them instead of stopping cold on
+the first QA failure. Validated end to end on a deliberately broken toy
+app: QA caught a real bug via live interaction (button click not updating
+the DOM) with the exact root cause, Developer's fix mode changed exactly
+one line and touched nothing else, and QA's re-run genuinely passed via
+the same live interaction, not a rubber stamp.
 
 ## Phase 7 — Reviewer
 **Goal:** a final pass/fail-with-reason check against the original

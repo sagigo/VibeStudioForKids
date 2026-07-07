@@ -41,6 +41,18 @@ inspired by claude-sub-agent's quality gates) but it's not required. Default
 is Developer then QA/Tester, with feedback able to send work back, rather
 than both working the same code at the same time.
 
+### Dev/QA retry loop is bounded at 4 total attempts
+1 build + up to 3 fix cycles (user's explicit choice over tighter/looser
+options). If QA still fails on the 4th attempt, the pipeline stops and
+reports to the end user rather than retrying indefinitely or quietly
+shipping something QA never actually passed.
+
+### QA fix cycles are targeted edits, not rewrites
+When Developer is invoked in `fix` mode (after a QA failure), it edits only
+what QA flagged as broken and leaves everything else untouched, rather than
+regenerating the app from scratch each retry. A full rewrite each cycle
+risks reintroducing bugs in parts that already passed QA.
+
 ### Orchestrator is a standalone agent
 It routes work and enforces gates between phases; it does not do any of
 the phases' work itself.

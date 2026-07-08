@@ -1,0 +1,14 @@
+# Dev notes - Triangle Drawer
+
+Built a single self-contained static page at `apps/triangle-drawer/index.html` implementing the triangle-drawing tool from the tech spec, with all UI text in Hebrew and `dir="rtl"` set on `<html>` for correct right-to-left layout.
+
+**What's inside `index.html` (inline CSS + vanilla JS, no dependencies, no build step):**
+
+- **Mode selector** - 4 buttons (שלוש צלעות / שתי צלעות וזווית ביניהן / שתי זוויות וצלע ביניהן / שלוש זוויות) that swap the 3 input fields' labels and units (ס"מ vs. מעלות) so it's always clear which field expects a side vs. an angle.
+- **Triangle solver** (`solveSSS`, `solveSAS`, `solveASA`, `solveAAA`) - uses the standard convention that side `a` is opposite angle `A`, etc. `solveSSS` applies the Law of Cosines and validates the triangle inequality (`a+b>c` etc.) plus positivity. `solveSAS` applies the Law of Cosines to find the missing side then the Law of Cosines again for a second angle, validating the included angle is in (0,180). `solveASA` applies the angle-sum rule for the third angle (rejecting inputs where the two given angles already sum to ≥180°) then the Law of Sines for the two missing sides. `solveAAA` validates the three angles sum to 180° (within 0.5° tolerance for rounding) and, per the spec's noted edge case, fixes side `a = 200` (arbitrary units) as a default so a concrete triangle can still be drawn even though 3 angles alone don't fix scale, then derives `b` and `c` via the Law of Sines. Every solver returns `{valid:false, message}` with a friendly Hebrew message on bad input instead of passing through to the renderer.
+- **Canvas renderer** (`drawTriangle`) - places vertex A at the origin, B along a baseline at distance `c`, and computes C from `b` and angle `A`; then auto-scales/centers the whole shape to fit the 600x420 canvas with padding, so triangles of any size or shape are always fully visible. Draws the triangle stroked in blue (`#2563eb`) with a light blue fill, and labels all three side lengths and all three angles (rounded, with ° for angles) positioned just outside/inside each side and vertex respectively.
+- **Error message area** - a styled inline box shown in place of the canvas (canvas is hidden via `hidden` class) whenever a solver reports invalid input (non-positive values, failed triangle inequality, angle out of range, angle-sum violations, or empty/non-numeric fields), so nothing crashes or draws nonsense.
+
+Verified the four solver formulas numerically against a known 3-4-5 right triangle (SSS, SAS, and ASA all reproduce the same 36.87°/53.13°/90° triangle) and confirmed the AAA equilateral case (60/60/60) yields equal sides, and confirmed the inline `<script>` parses without syntax errors.
+
+File written: `/home/user/VibeStudioForKids/apps/triangle-drawer/index.html` (single file, no other assets).

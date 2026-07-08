@@ -79,6 +79,23 @@ disconnected (this happens - they needed re-auth mid-Phase-8), the studio
 still pushes and says plainly that verification couldn't be completed,
 rather than blocking the deploy or guessing at success/failure.
 
+### Orchestrator owns state.json, the driver maintains it
+Orchestrator isn't a continuously-running process - it's consulted at the
+start of a run (to initialize `state.json`) and can be re-consulted mid-run
+to interpret an existing one (status report, resumability), but the actual
+moment-to-moment updates as stages complete are the driving Skill's job,
+since it's the one actually executing each stage. This replaced Phase 1's
+static `plan.json`, which was written once and never updated - useless for
+knowing where an interrupted run actually stood.
+
+### Gate enforcement means a real check, not just an instruction to ask
+The Delivery gate isn't just "ask AskUserQuestion and hope the prose is
+followed" - `studio-build` now checks `state.json`'s
+`delivery-deploy-gate.passed` immediately before the real push, and
+refuses to push if it isn't `true`. This makes the gate an actual
+technical check with a persisted record, not only a convention that
+depends on the driver remembering to honor it in the moment.
+
 ### Orchestrator is a standalone agent
 It routes work and enforces gates between phases; it does not do any of
 the phases' work itself.

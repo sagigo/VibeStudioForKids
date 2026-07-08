@@ -157,7 +157,18 @@ success/failure it can't back up.
 **Goal:** once every role's real shape is known, harden the coordinator:
 state tracking across phases, resumability after interruption, gate
 enforcement, retry bounds, error paths.
-**Status:** Not started (a stub Orchestrator exists from Phase 1)
+**Status:** Done. Orchestrator now initializes and can report on
+`runs/<run-id>/state.json` - a persisted record of current stage,
+completed stages, gate status, QA retry count, and halt reason, replacing
+the old static `plan.json` that never changed after being written.
+`studio-build` maintains it throughout the run: every halt path
+(safety flag, QA exhaustion, Review fail, unverifiable deploy) sets a
+specific `halted_reason` instead of just stopping; the Delivery gate is
+now actually checked (not just asked) before the real push happens.
+Tested both Orchestrator paths directly: a new run initializes valid
+state, and a synthetic mid-run state.json (simulating an interrupted
+session) is correctly read and reported on without being overwritten -
+the core mechanism resumability depends on.
 
 ## Phase 10 — Cross-domain validation
 **Goal:** confirm the pipeline is actually generic by running it

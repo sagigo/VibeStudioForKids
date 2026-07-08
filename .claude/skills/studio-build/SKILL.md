@@ -16,16 +16,27 @@ their first message and that detected language is used for everything
 kid-facing for the rest of the run, including the deployed app's own UI
 text.
 
+**Throughout the run**, keep `runs/<run-id>/state.json` (initialized by
+Orchestrator in step 1) up to date: after finishing each step, update
+`current_stage`/`stages_completed`; if you halt for any reason, set
+`status` and `halted_reason` before stopping rather than just stopping
+silently. This is what makes a run resumable and its status inspectable
+later, not just a log nobody reads.
+
 ## 0. Set up the run
 
 - Generate a run id: `date +%Y%m%d-%H%M%S`.
-- Create `runs/<run-id>/`.
+- Create `runs/<run-id>/`. If you were asked to resume an *existing* run
+  id instead of starting fresh, skip straight to step 1 - Orchestrator
+  will tell you where things stand.
 
 ## 1. Orchestrator
 
 Invoke the `orchestrator` agent (foreground) with the run directory path.
-It writes `runs/<run-id>/plan.json` confirming the stage order. Read it
-back before continuing.
+If `state.json` doesn't exist yet, it initializes it and confirms the
+stage order. If it already exists (resuming a run), Orchestrator reads it
+and reports current status instead - pick up from wherever it says the
+run actually is rather than restarting from step 2.
 
 ## 2. Ask the kid what they want to build
 
@@ -44,17 +55,19 @@ it can't be multiple-choice). Save their raw reply to
 ## 3. Safety check, then Translator (in) - detects the kid's language
 
 Invoke the `safety-check` agent: input `00-request.txt`, output
-`runs/<run-id>/01-check.json`. If `flagged` is `true`, stop the pipeline
-immediately, do not continue to Intake, and surface the flag (and its
-reason) to the end user rather than the kid.
+`runs/<run-id>/01-check.json`. If `flagged` is `true`, set `state.json`'s
+`status` to `halted_safety` and `halted_reason` to the flag's reason, stop
+the pipeline immediately, do not continue to Intake, and surface the flag
+(and its reason) to the end user rather than the kid.
 
 Only if `flagged` is `false`, invoke the `translator` agent: input
 `00-request.txt`, direction `detect->en`, output
 `runs/<run-id>/02-request.en.txt`. Read the sidecar
 `02-request.en.txt.lang.json` it writes (`language_code`, `language_name`,
-`rtl`) - this is the kid's language for the rest of the run. Keep it
-handy; you'll pass it to `translator` (as the `en-><lang>` target) and to
-`developer` for the rest of this run.
+`rtl`) - this is the kid's language for the rest of the run. Write it into
+`state.json`'s `kid_language`. Keep it handy; you'll pass it to
+`translator` (as the `en-><lang>` target) and to `developer` for the rest
+of this run.
 
 ## 4. Interactive Intake loop
 
@@ -108,7 +121,8 @@ Derive a short, readable, lowercase-hyphenated slug (2-4 words, in
 English regardless of the kid's language - it's a URL path, not
 kid-facing text) from the requirement's Summary line, e.g.
 `pet-feeding-tracker`. Check `apps/` for a collision and adjust if needed.
-Target app directory is `apps/<slug>/`.
+Target app directory is `apps/<slug>/`. Write it into `state.json`'s
+`app_slug`.
 
 ## 8-9. Development + QA - bounded retry loop
 
@@ -123,25 +137,29 @@ attempt number as you go.
    is Developer's job, not a separate localization pass.
 2. Invoke the `qa` agent: inputs `06-tasks.md` and the app directory,
    output `runs/<run-id>/08-qa-report-<attempt>.md` (one file per attempt,
-   so the history isn't overwritten - e.g. `08-qa-report-1.md`).
+   so the history isn't overwritten - e.g. `08-qa-report-1.md`). Increment
+   `state.json`'s `qa_attempts` each time you reach this step.
 3. If QA's overall verdict is PASS, continue to step 10 (Reviewer), using
    this attempt's QA report as `08-qa-report.md` (copy or reference the
    winning attempt's file under that name, since later steps expect it).
 4. If FAIL and attempts remain (fewer than 4 total so far): invoke
    `developer` again, mode `fix` - same inputs as attempt 1, plus this
    attempt's QA report path. Go back to step 2 for the next attempt.
-5. If FAIL on the 4th attempt: stop the pipeline here. Do not continue to
-   Reviewer or Delivery. Report to the end user what was tried, what's
-   still failing (from the last QA report), and that it needs human
-   attention - this is a real, bounded give-up, not a silent failure.
+5. If FAIL on the 4th attempt: set `state.json`'s `status` to
+   `halted_qa_exhausted` and `halted_reason` to the last QA report's
+   summary. Stop the pipeline here. Do not continue to Reviewer or
+   Delivery. Report to the end user what was tried, what's still failing
+   (from the last QA report), and that it needs human attention - this is
+   a real, bounded give-up, not a silent failure.
 
 ## 10. Reviewer
 
 Invoke the `reviewer` agent: inputs `04-requirement.md`, `05-tech-spec.md`
 (so it can see any `Scope adjustments` and judge against the adjusted
 scope, not blindly the original ask), `08-qa-report.md`, and the app
-directory, output `runs/<run-id>/09-review.md`. If it fails, stop and
-report to the user.
+directory, output `runs/<run-id>/09-review.md`. If it fails, set
+`state.json`'s `status` to `halted_review_fail` and `halted_reason` to the
+review's reasoning, stop, and report to the user.
 
 ## 11. Delivery - stage 1 (local)
 
@@ -160,13 +178,23 @@ Review both passed, and that the local run was clean. Then use
 `AskUserQuestion` to ask explicit go/no-go: do they want this made public
 on a real shareable GitHub Pages link, yes or no. Do not proceed past this
 point without an explicit yes - this is the Delivery gate the roadmap
-calls out by name.
+calls out by name. On yes, mark the `delivery-deploy-gate` entry in
+`state.json`'s `gates` as `passed: true` before continuing - this is the
+one flag that actually authorizes step 13's push, so set it deliberately,
+not as an afterthought.
 
 ## 13. Deploy (only after explicit yes)
 
 This part is deliberately **not** delegated to the Delivery agent - it's a
 real push to the remote, so it happens here in the open, in the main
-conversation, where the user can see exactly what's being pushed:
+conversation, where the user can see exactly what's being pushed.
+
+**Before doing anything else in this step**, check `state.json`'s
+`delivery-deploy-gate.passed` is actually `true`. If it isn't (state got
+out of sync somehow, or you're resuming a run and this step was reached
+some other way), stop and re-ask the gate rather than pushing - this
+check is the real enforcement behind the gate, not just the earlier
+prose asking you nicely.
 
 - `git add apps/<slug> runs/<run-id>` (plus any pipeline files not yet
   committed).
@@ -188,7 +216,9 @@ conversation, where the user can see exactly what's being pushed:
   Actions run finished from here, and point the user at
   `https://github.com/sagigo/VibeStudioForKids/actions` to check
   themselves. Don't claim it's live when you haven't verified it, and
-  don't claim it failed when you simply couldn't check.
+  don't claim it failed when you simply couldn't check. Set `state.json`'s
+  `status` to `halted_deploy_unverified` in this case so a future resume
+  knows to pick up right here, not restart the whole run.
 - Once confirmed live, the URL is
   `https://sagigo.github.io/VibeStudioForKids/<slug>/`.
 
@@ -204,4 +234,4 @@ if the Actions run couldn't be checked, output
 Invoke the `translator` agent: input `11-delivery-message.en.txt`,
 direction `en-><kid's language>`, output `runs/<run-id>/12-message.txt`.
 Show this final message, and the live link, to the user as the last thing
-you do.
+you do. Set `state.json`'s `status` to `completed`.

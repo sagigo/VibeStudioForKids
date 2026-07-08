@@ -1,0 +1,19 @@
+{
+  "run_id": "20260708-163103",
+  "status": "in_progress",
+  "current_stage": "safety-check",
+  "stages_completed": [],
+  "stages": [
+    "safety-check", "translate-in", "intake-loop", "tech-spec",
+    "task-planning", "development-qa-loop", "review", "delivery-local",
+    "delivery-deploy-gate", "deploy", "delivery-message", "translate-out"
+  ],
+  "gates": [
+    { "id": "delivery-deploy-gate", "passed": false }
+  ],
+  "qa_attempts": 0,
+  "qa_attempts_max": 4,
+  "halted_reason": null,
+  "kid_language": null,
+  "app_slug": null
+}

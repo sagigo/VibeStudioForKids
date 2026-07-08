@@ -1,0 +1,17 @@
+{
+  "original_idea_en": "Hello I'm Moshiko. I need to practice geometry. I want a program to draw triangles by length and angle.",
+  "qa_history": [
+    {
+      "question": "I have some ideas for how to build this - want to help me decide a few things, or should I just figure it out and surprise you?",
+      "answer": "Let's decide together"
+    },
+    {
+      "question": "When you draw a triangle, how do you want to enter its shape - by typing the three side lengths, or by typing two sides and the angle between them?",
+      "answer": "All the options: 3 sides, or 2 sides and an angle, or 2 angles and a side, or 3 angles - whatever I write is enough, you fill in the rest with geometry rules."
+    },
+    {
+      "question": "After the triangle is drawn, do you want to see the numbers (side lengths and angles) written right on the picture, or just see the clean triangle shape by itself?",
+      "answer": "Show the numbers"
+    }
+  ]
+}

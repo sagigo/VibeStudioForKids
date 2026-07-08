@@ -1,0 +1,9 @@
+{
+  "done": false,
+  "question": "Should this just be a tool where you type in numbers and it draws the triangle, or should it also have a practice mode that quizzes you - like showing you some triangle info and letting you guess the missing side or angle before revealing the answer?",
+  "options": [
+    {"label": "Just draw it", "description": "I type in the values I know, and the program fills in the rest and draws the triangle with all numbers labeled."},
+    {"label": "Add a quiz mode too", "description": "Besides drawing, the program can also give me a random triangle with some values hidden, let me guess, then show if I was right."},
+    {"label": "You decide", "description": "I'll add both: a drawing tool for typing in known values, plus a simple practice/quiz mode with random triangles and hidden values to guess, since the goal is practicing geometry."}
+  ]
+}

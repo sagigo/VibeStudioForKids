@@ -140,7 +140,18 @@ mismatch in one test fixture that wasn't even the thing being tested for.
 **Goal:** replace Phase 1's stub with the real thing — local build/run,
 then remote deployment to GitHub Pages, gated on the end user's explicit
 go-ahead.
-**Status:** Not started
+**Status:** Done. The "remote deployment, gated on go-ahead" half was
+already real since Phase 1 and proven repeatedly since; the actual gap
+was "local build/run" - stage 1 used to just check files exist. Delivery
+now actually serves the app locally and loads it with headless Chromium,
+confirms no console/page errors, and captures a real screenshot the end
+user sees before the gate - not just a text description. Tested on
+coin-jump-runner: produced a genuine, verified screenshot of the live app.
+Also hardened the deploy step for GitHub MCP tool unavailability
+(happened mid-session during this phase): the push itself doesn't depend
+on those tools and still works, only Actions-run verification does - the
+studio now says so plainly instead of blocking or silently claiming
+success/failure it can't back up.
 
 ## Phase 9 — Orchestrator hardening
 **Goal:** once every role's real shape is known, harden the coordinator:

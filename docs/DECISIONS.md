@@ -64,6 +64,21 @@ turn Reviewer into a rubber stamp: an incomplete build with a legitimate
 scope adjustment still correctly failed, for real gaps unrelated to the
 adjustment itself.
 
+### "Local build/run" means actually running it, not checking files exist
+Delivery's stage 1 used to just confirm the app's files were present and
+summarize QA's report. It now actually serves the app and loads it with a
+real headless browser, capturing a screenshot the end user sees before the
+Delivery gate - the human deciding whether to make something public should
+see it, not just read a description of it.
+
+### GitHub MCP tool unavailability doesn't block a deploy, only its verification
+The push that makes an app public is plain git over an already-
+authenticated remote and doesn't depend on GitHub MCP tools at all; only
+confirming the GitHub Actions run succeeded does. If those tools are
+disconnected (this happens - they needed re-auth mid-Phase-8), the studio
+still pushes and says plainly that verification couldn't be completed,
+rather than blocking the deploy or guessing at success/failure.
+
 ### Orchestrator is a standalone agent
 It routes work and enforces gates between phases; it does not do any of
 the phases' work itself.

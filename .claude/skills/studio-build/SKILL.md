@@ -147,16 +147,20 @@ report to the user.
 
 Invoke the `delivery` agent (stage 1 / local build report): inputs
 `09-review.md` and the app directory, output
-`runs/<run-id>/10-delivery-local.md`.
+`runs/<run-id>/10-delivery-local.md`. It actually runs the app locally and
+saves a screenshot at `runs/<run-id>/preview.png` - use `SendUserFile` to
+show that screenshot to the end user before the gate below, so "what was
+built" isn't just a text description.
 
 ## 12. The gate - stop and ask
 
-This is the one step that is not a stub. Summarize for the end user, in
-plain terms: what was built, that QA and Review both passed, and where the
-local files are. Then use `AskUserQuestion` to ask explicit go/no-go: do
-they want this made public on a real shareable GitHub Pages link, yes or
-no. Do not proceed past this point without an explicit yes - this is the
-Delivery gate the roadmap calls out by name.
+This is the one step that is not a stub. Show the screenshot from step 11,
+and summarize for the end user in plain terms: what was built, that QA and
+Review both passed, and that the local run was clean. Then use
+`AskUserQuestion` to ask explicit go/no-go: do they want this made public
+on a real shareable GitHub Pages link, yes or no. Do not proceed past this
+point without an explicit yes - this is the Delivery gate the roadmap
+calls out by name.
 
 ## 13. Deploy (only after explicit yes)
 
@@ -167,20 +171,33 @@ conversation, where the user can see exactly what's being pushed:
 - `git add apps/<slug> runs/<run-id>` (plus any pipeline files not yet
   committed).
 - Commit with a clear message.
-- Push to the current branch with `git push -u origin <branch>`.
+- Push to the current branch with `git push -u origin <branch>`. This step
+  (making it public) doesn't depend on the GitHub MCP tools at all - it's
+  plain git over the already-authenticated remote, so it still works even
+  if those tools are disconnected.
 - The push should trigger `.github/workflows/deploy-pages.yml` (it
   watches `apps/**`). Poll the Actions run (`mcp__github__actions_list` /
   `actions_get` / `get_job_logs`) until it succeeds or fails. If it fails,
   report clearly rather than silently giving up - see
   `docs/DECISIONS.md` for the one-time repo/environment setup this can
   depend on.
-- Once live, the URL is
+- **If the GitHub MCP tools are unavailable** (disconnected/need
+  re-auth): the push above still happened and the app is genuinely on its
+  way to being public - don't block on this or retry the tool call in a
+  loop. Say plainly that the push succeeded but you can't confirm the
+  Actions run finished from here, and point the user at
+  `https://github.com/sagigo/VibeStudioForKids/actions` to check
+  themselves. Don't claim it's live when you haven't verified it, and
+  don't claim it failed when you simply couldn't check.
+- Once confirmed live, the URL is
   `https://sagigo.github.io/VibeStudioForKids/<slug>/`.
 
 ## 14. Delivery - stage 2 (hand-back message)
 
 Invoke the `delivery` agent again (stage 2 / hand-back message) with the
-real live URL, output `runs/<run-id>/11-delivery-message.en.txt`.
+real live URL if confirmed, or a note that it's pending human verification
+if the Actions run couldn't be checked, output
+`runs/<run-id>/11-delivery-message.en.txt`.
 
 ## 15. Translator (out)
 

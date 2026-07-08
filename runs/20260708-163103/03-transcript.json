@@ -12,6 +12,14 @@
     {
       "question": "After the triangle is drawn, do you want to see the numbers (side lengths and angles) written right on the picture, or just see the clean triangle shape by itself?",
       "answer": "Show the numbers"
+    },
+    {
+      "question": "Should this just be a tool where you type in numbers and it draws the triangle, or should it also have a practice mode that quizzes you?",
+      "answer": "Just draw it"
+    },
+    {
+      "question": "What color should the triangle be drawn in?",
+      "answer": "A color that you can pick but you're nagging with questions"
     }
   ]
 }

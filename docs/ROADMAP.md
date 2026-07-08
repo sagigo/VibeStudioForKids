@@ -175,7 +175,25 @@ the core mechanism resumability depends on.
 end-to-end against clearly different app types (a game, a tracker, a
 form-based tool) and fixing anything that turns out to be secretly
 game-specific.
-**Status:** Not started
+**Status:** Done. Full live run for a math-education tool (not a game): a
+kid ("Moshiko," with real spelling mistakes in the original Hebrew) asked
+for a flexible triangle solver/drawer accepting any 3 of 6 known values
+(sides/angles) via SSS/SAS/ASA/AAA, computed with law of cosines/sines,
+rendered on a labeled canvas. Nothing in the pipeline turned out to be
+secretly game-shaped: Intake correctly handled a sophisticated free-text
+answer requesting full input flexibility and later correctly picked up on
+"you're nagging with questions" as a signal to stop and finalize; Tech
+Spec caught a genuine domain edge case (AAA input is scale-ambiguous) and
+handled it transparently; QA verified the actual trigonometry numerically
+in a live browser, not just that a page loads. Deployed successfully:
+https://sagigo.github.io/VibeStudioForKids/triangle-drawer/
+
+This run also surfaced a real, serious bug unrelated to genericity - see
+`docs/DECISIONS.md` ("Deploy must be an explicit trigger, never implied by
+a push"): an ordinary progress-commit made during the run accidentally
+published the app hours before Review or the human gate, because the
+deploy workflow triggered on any push touching `apps/**` regardless of
+why. Fixed the same day it was found.
 
 ---
 

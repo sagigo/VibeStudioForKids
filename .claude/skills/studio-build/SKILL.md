@@ -203,22 +203,31 @@ prose asking you nicely.
   (making it public) doesn't depend on the GitHub MCP tools at all - it's
   plain git over the already-authenticated remote, so it still works even
   if those tools are disconnected.
-- The push should trigger `.github/workflows/deploy-pages.yml` (it
-  watches `apps/**`). Poll the Actions run (`mcp__github__actions_list` /
-  `actions_get` / `get_job_logs`) until it succeeds or fails. If it fails,
-  report clearly rather than silently giving up - see
-  `docs/DECISIONS.md` for the one-time repo/environment setup this can
-  depend on.
+- **The push by itself does not deploy anything.**
+  `.github/workflows/deploy-pages.yml` only triggers on `workflow_dispatch`
+  now, deliberately - it used to auto-trigger on any push touching
+  `apps/**`, which meant ordinary progress-commits made *during* the run
+  (Developer's build, QA/Review artifacts) could silently deploy an app
+  before it had passed QA, Review, or this very gate. See
+  `docs/DECISIONS.md` for how that was discovered. So: after pushing,
+  explicitly trigger the workflow with `mcp__github__actions_run_trigger`
+  (method `run_workflow`, workflow `deploy-pages.yml`, ref the current
+  branch) - this is the one and only thing that actually makes the app
+  public, and it only happens here, after the gate.
+- Poll the Actions run (`mcp__github__actions_list` / `actions_get` /
+  `get_job_logs`) until it succeeds or fails. If it fails, report clearly
+  rather than silently giving up - see `docs/DECISIONS.md` for the
+  one-time repo/environment setup this can depend on.
 - **If the GitHub MCP tools are unavailable** (disconnected/need
-  re-auth): the push above still happened and the app is genuinely on its
-  way to being public - don't block on this or retry the tool call in a
-  loop. Say plainly that the push succeeded but you can't confirm the
-  Actions run finished from here, and point the user at
-  `https://github.com/sagigo/VibeStudioForKids/actions` to check
-  themselves. Don't claim it's live when you haven't verified it, and
-  don't claim it failed when you simply couldn't check. Set `state.json`'s
-  `status` to `halted_deploy_unverified` in this case so a future resume
-  knows to pick up right here, not restart the whole run.
+  re-auth): you can't trigger the deploy at all in this case (no
+  automatic fallback anymore, by design) - don't block on this or retry
+  the tool call in a loop. Say plainly that the app is committed and
+  ready but couldn't be deployed from here, and that re-running this step
+  (or a manual `workflow_dispatch` in the GitHub UI) once the tools
+  reconnect will actually make it public. Don't claim it's live when you
+  haven't triggered and verified it. Set `state.json`'s `status` to
+  `halted_deploy_unverified` in this case so a future resume knows to
+  pick up right here, not restart the whole run.
 - Once confirmed live, the URL is
   `https://sagigo.github.io/VibeStudioForKids/<slug>/`.
 

@@ -1,13 +1,6 @@
 name: Deploy generated apps to GitHub Pages
 
 on:
-  push:
-    branches:
-      - main
-      - claude/roadmap-implementation-5d63ne
-    paths:
-      - "apps/**"
-      - ".github/workflows/deploy-pages.yml"
   workflow_dispatch: {}
 
 permissions:

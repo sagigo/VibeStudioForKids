@@ -71,13 +71,35 @@ real headless browser, capturing a screenshot the end user sees before the
 Delivery gate - the human deciding whether to make something public should
 see it, not just read a description of it.
 
-### GitHub MCP tool unavailability doesn't block a deploy, only its verification
-The push that makes an app public is plain git over an already-
-authenticated remote and doesn't depend on GitHub MCP tools at all; only
-confirming the GitHub Actions run succeeded does. If those tools are
-disconnected (this happens - they needed re-auth mid-Phase-8), the studio
-still pushes and says plainly that verification couldn't be completed,
-rather than blocking the deploy or guessing at success/failure.
+### GitHub MCP tool unavailability doesn't block a push, only the deploy trigger and its verification
+**Superseded by the Phase 10 finding below** - at the time this was written,
+a push touching `apps/**` auto-triggered the deploy, so "the push doesn't
+depend on GitHub MCP tools" also meant "the deploy doesn't either." That's
+no longer true: deploying now requires an explicit `workflow_dispatch`
+call, which *does* need the GitHub MCP tools. A push with those tools
+disconnected still saves the work, but nothing goes public until the
+tools are back and the dispatch call succeeds.
+
+### Deploy must be an explicit trigger, never implied by a push
+Found live, in Phase 10: the deploy workflow auto-triggered on any push
+touching `apps/**`, which meant an ordinary progress-commit (Developer's
+build, made *during* the run, before QA had even started) silently
+deployed the app to the public URL - hours before Review or the human
+gate. Nothing inappropriate went out (the app happened to pass QA/Review
+and the human happened to say yes anyway), but the mechanism was broken:
+had QA or Review failed, or had the human said no, the app would already
+have been public with no way to un-ship it before that decision was even
+made. Root cause: `state.json`'s gate check (Phase 9) governs whether the
+driver *chooses* to push and deploy, but a workflow that deploys on any
+matching push doesn't care why the push happened - a backup commit and an
+authorized release commit look identical to it. Fixed by removing the
+`push` trigger from `deploy-pages.yml` entirely - it now only deploys on
+`workflow_dispatch`, called explicitly by `studio-build` after the gate,
+so committing progress during a run can never publish anything by
+accident again. Lesson for any future automation that reacts to
+repository state: a side effect as consequential as "make this public"
+should never be implied by an action (like committing) that also happens
+for unrelated, harmless reasons.
 
 ### Orchestrator owns state.json, the driver maintains it
 Orchestrator isn't a continuously-running process - it's consulted at the

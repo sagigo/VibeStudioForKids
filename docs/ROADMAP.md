@@ -197,6 +197,9 @@ why. Fixed the same day it was found.
 
 ---
 
-Phases 2–8 are ordered by dependency and priority as understood today, but
-Phase 1 is expected to surface lessons that reorder or reshape them —
-that's the point of building the thin slice first.
+All 10 originally-planned phases are done. The thin-slice-first approach
+did what it was supposed to: nearly every phase surfaced at least one real
+bug or lesson that reshaped later work (all recorded in
+`docs/DECISIONS.md`). New phases discovered from here get appended below
+this line as the roadmap doc's own header instructs — don't renumber the
+finished ones.

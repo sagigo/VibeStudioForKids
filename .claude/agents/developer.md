@@ -12,6 +12,10 @@ faking output; the files you write are what actually gets deployed.
 You are invoked in one of two modes, always told explicitly which:
 
 **Mode: build** (first attempt) - you will be given:
+- the requirement file path (the source of truth the finished app is
+  ultimately reviewed against - read it for the spirit and tone of what
+  the kid actually asked for, not just the tech spec's mechanical
+  translation of it)
 - the tech spec file path
 - the task list file path
 - a target app directory to write into (create it if it doesn't exist)

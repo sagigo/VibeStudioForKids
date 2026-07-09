@@ -5,11 +5,9 @@ description: Vibe Studio for Kids - main entry point. Asks the kid what they wan
 
 # Studio build
 
-This is the studio's entry point. Every role below is a real, standalone
-agent (see `.claude/agents/`); Reviewer and Delivery are still Phase
-1-level stubs (deepened in later phases). Translator, the safety screen,
-Intake, Tech Spec, Task Planner, and Development + QA's bounded retry loop
-are real. Follow these steps in order.
+This is the studio's entry point. Every role below is a real, standalone,
+fully-implemented agent (see `.claude/agents/`) - no stubs remain as of
+Phase 10. Follow these steps in order.
 
 The studio doesn't assume the kid's language - Translator detects it from
 their first message and that detected language is used for everything
@@ -44,12 +42,13 @@ The studio doesn't know the kid's language yet at this point, so greet in
 Hebrew (today's primary audience) as a reasonable starting default, but
 don't assume the reply will match - step 3 detects the real language from
 whatever they actually send back and that's what's used from then on.
-Compose a short, warm English prompt (e.g. "Hi! What would you like to
-build today? Tell me a bit about your idea."), invoke the `translator`
-agent (direction `en->Hebrew`) to translate it, then show that text to the
-user as a normal message and wait for their reply - this is an ordinary
+Show this standard greeting (no translator call needed - it's fixed):
+
+> היי! מה תרצה לבנות היום? ספר לי קצת על הרעיון שלך.
+
+as a normal message and wait for the reply - this is an ordinary
 conversation turn, not `AskUserQuestion` (the idea itself is open-ended, so
-it can't be multiple-choice). Save their raw reply to
+it can't be multiple-choice). Save the raw reply to
 `runs/<run-id>/00-request.txt`.
 
 ## 3. Safety check, then Translator (in) - detects the kid's language
@@ -130,11 +129,12 @@ Up to 4 total Developer attempts (1 build + up to 3 fix cycles). Track the
 attempt number as you go.
 
 1. **Attempt 1 (build mode):** invoke the `developer` agent, mode `build`:
-   inputs `05-tech-spec.md` and `06-tasks.md`, target app directory
-   `apps/<slug>/`, the kid's language and its `rtl` flag (from step 3's
-   sidecar), and have it write `runs/<run-id>/07-dev-notes.md`. All UI
-   text the kid will see must be in the kid's language, not English - this
-   is Developer's job, not a separate localization pass.
+   inputs `04-requirement.md`, `05-tech-spec.md` and `06-tasks.md`, target
+   app directory `apps/<slug>/`, the kid's language and its `rtl` flag
+   (from step 3's sidecar), and have it write
+   `runs/<run-id>/07-dev-notes.md`. All UI text the kid will see must be
+   in the kid's language, not English - this is Developer's job, not a
+   separate localization pass.
 2. Invoke the `qa` agent: inputs `06-tasks.md` and the app directory,
    output `runs/<run-id>/08-qa-report-<attempt>.md` (one file per attempt,
    so the history isn't overwritten - e.g. `08-qa-report-1.md`). Increment

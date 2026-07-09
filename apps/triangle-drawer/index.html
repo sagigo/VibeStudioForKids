@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מְשַׁרְטֵט הַמְּשֻׁלָּשִׁים</title>
+<style>
+  :root{
+    --blue: #2563eb;
+    --blue-dark: #1d4ed8;
+    --bg1: #fef6e4;
+    --bg2: #e0f2fe;
+    --card: #ffffff;
+    --ink: #1e293b;
+    --accent: #f97316;
+    --error-bg: #fee2e2;
+    --error-ink: #991b1b;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: linear-gradient(135deg, var(--bg1), var(--bg2));
+    color: var(--ink);
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+  }
+  .wrap{
+    width: 100%;
+    max-width: 760px;
+  }
+  header{
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  h1{
+    font-size: 2rem;
+    margin: 0 0 6px;
+    color: var(--blue-dark);
+  }
+  header p{
+    margin: 0;
+    color: #475569;
+    font-size: 1.05rem;
+  }
+  .card{
+    background: var(--card);
+    border-radius: 20px;
+    padding: 22px;
+    box-shadow: 0 10px 30px rgba(30, 41, 59, 0.12);
+    margin-bottom: 20px;
+  }
+  .modes{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .mode-btn{
+    border: 2px solid #cbd5e1;
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 12px 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .mode-btn:hover{
+    border-color: var(--blue);
+  }
+  .mode-btn.active{
+    background: var(--blue);
+    border-color: var(--blue-dark);
+    color: white;
+    transform: scale(1.03);
+  }
+  .fields{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+  .field label{
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+  }
+  .field .unit{
+    font-weight: 400;
+    color: #64748b;
+    font-size: 0.85rem;
+  }
+  .field input{
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 1.05rem;
+    border-radius: 10px;
+    border: 2px solid #cbd5e1;
+    font-family: inherit;
+  }
+  .field input:focus{
+    outline: none;
+    border-color: var(--blue);
+  }
+  .draw-btn{
+    display: block;
+    width: 100%;
+    padding: 14px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: white;
+    background: linear-gradient(135deg, var(--accent), #ea580c);
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: transform 0.1s ease;
+  }
+  .draw-btn:hover{
+    transform: translateY(-2px);
+  }
+  .draw-btn:active{
+    transform: translateY(0);
+  }
+  .result-card{
+    text-align: center;
+  }
+  canvas{
+    max-width: 100%;
+    background: #f8fafc;
+    border-radius: 16px;
+    border: 2px solid #e2e8f0;
+  }
+  .error-box{
+    display: none;
+    background: var(--error-bg);
+    color: var(--error-ink);
+    border: 2px solid #fca5a5;
+    border-radius: 14px;
+    padding: 18px;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+  .hidden{ display: none !important; }
+  footer{
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📐 מְשַׁרְטֵט הַמְּשֻׁלָּשִׁים</h1>
+    <p>בחר מה אתה יודע על המשולש, מלא את הערכים - ואני אצייר אותו בשבילך!</p>
+  </header>
+
+  <div class="card">
+    <div class="modes" id="modes"></div>
+    <form id="triangle-form">
+      <div class="fields" id="fields"></div>
+      <button type="submit" class="draw-btn">צייר את המשולש! 🎨</button>
+    </form>
+  </div>
+
+  <div class="card result-card">
+    <canvas id="canvas" width="600" height="420"></canvas>
+    <div class="error-box" id="error-box"></div>
+  </div>
+
+  <footer>עשה חשבון, ותראה משולש 🔺</footer>
+</div>
+
+<script>
+(function(){
+
+  // ---------- Geometry helpers ----------
+  function degToRad(d){ return d * Math.PI / 180; }
+  function radToDeg(r){ return r * 180 / Math.PI; }
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+  // ---------- Solvers ----------
+  // Convention: side a is opposite angle A, side b opposite angle B, side c opposite angle C.
+
+  function solveSSS(a, b, c){
+    if(!(a > 0 && b > 0 && c > 0)){
+      return { valid:false, message: 'אופס! כל הצלעות צריכות להיות מספרים גדולים מאפס.' };
+    }
+    if(!(a + b > c && a + c > b && b + c > a)){
+      return { valid:false, message: 'הצלעות האלה לא יכולות להיפגש וליצור משולש אמיתי. נסה מספרים אחרים!' };
+    }
+    const A = radToDeg(Math.acos(clamp((b*b + c*c - a*a) / (2*b*c), -1, 1)));
+    const B = radToDeg(Math.acos(clamp((a*a + c*c - b*b) / (2*a*c), -1, 1)));
+    const C = 180 - A - B;
+    return { valid:true, a, b, c, A, B, C };
+  }
+
+  function solveSAS(b, angleADeg, c){
+    if(!(b > 0 && c > 0)){
+      return { valid:false, message: 'אופס! אורכי הצלעות צריכים להיות מספרים גדולים מאפס.' };
+    }
+    if(!(angleADeg > 0 && angleADeg < 180)){
+      return { valid:false, message: 'הזווית צריכה להיות בין 0 ל-180 מעלות.' };
+    }
+    const A = angleADeg;
+    const Arad = degToRad(A);
+    const a = Math.sqrt(b*b + c*c - 2*b*c*Math.cos(Arad));
+    if(!(a > 0)){
+      return { valid:false, message: 'הערכים האלה לא יוצרים משולש אמיתי. נסה שוב!' };
+    }
+    const B = radToDeg(Math.acos(clamp((a*a + c*c - b*b) / (2*a*c), -1, 1)));
+    const C = 180 - A - B;
+    return { valid:true, a, b, c, A, B, C };
+  }
+
+  function solveASA(angleADeg, sideC, angleBDeg){
+    if(!(sideC > 0)){
+      return { valid:false, message: 'אורך הצלע צריך להיות מספר גדול מאפס.' };
+    }
+    if(!(angleADeg > 0 && angleBDeg > 0)){
+      return { valid:false, message: 'הזוויות צריכות להיות מספרים גדולים מאפס.' };
+    }
+    if(angleADeg + angleBDeg >= 180){
+      return { valid:false, message: 'סכום שתי הזוויות חייב להיות פחות מ-180 מעלות, אחרת אין משולש.' };
+    }
+    const A = angleADeg, B = angleBDeg, c = sideC;
+    const C = 180 - A - B;
+    const Arad = degToRad(A), Brad = degToRad(B), Crad = degToRad(C);
+    const a = c * Math.sin(Arad) / Math.sin(Crad);
+    const b = c * Math.sin(Brad) / Math.sin(Crad);
+    return { valid:true, a, b, c, A, B, C };
+  }
+
+  function solveAAA(angleADeg, angleBDeg, angleCDeg){
+    if(!(angleADeg > 0 && angleBDeg > 0 && angleCDeg > 0)){
+      return { valid:false, message: 'כל הזוויות צריכות להיות מספרים גדולים מאפס.' };
+    }
+    if(Math.abs(angleADeg + angleBDeg + angleCDeg - 180) > 0.5){
+      return { valid:false, message: 'שלוש הזוויות של משולש חייבות ביחד להסתכם ב-180 מעלות בדיוק. נסה שוב!' };
+    }
+    const A = angleADeg, B = angleBDeg, C = angleCDeg;
+    const a = 200; // fixed default size - shape is fixed by 3 angles, size is not
+    const Arad = degToRad(A);
+    const b = a * Math.sin(degToRad(B)) / Math.sin(Arad);
+    const c = a * Math.sin(degToRad(C)) / Math.sin(Arad);
+    return { valid:true, a, b, c, A, B, C };
+  }
+
+  // ---------- Modes config ----------
+  const MODES = {
+    sss: {
+      title: '3 צלעות',
+      fields: [
+        { id:'f1', label:'צלע ראשונה', unit:'ס"מ' },
+        { id:'f2', label:'צלע שנייה', unit:'ס"מ' },
+        { id:'f3', label:'צלע שלישית', unit:'ס"מ' }
+      ],
+      solve: (v1, v2, v3) => solveSSS(v1, v2, v3)
+    },
+    sas: {
+      title: '2 צלעות וזווית ביניהן',
+      fields: [
+        { id:'f1', label:'צלע ראשונה', unit:'ס"מ' },
+        { id:'f2', label:'הזווית שביניהן', unit:'מעלות' },
+        { id:'f3', label:'צלע שנייה', unit:'ס"מ' }
+      ],
+      solve: (v1, v2, v3) => solveSAS(v1, v2, v3)
+    },
+    asa: {
+      title: '2 זוויות וצלע ביניהן',
+      fields: [
+        { id:'f1', label:'זווית ראשונה', unit:'מעלות' },
+        { id:'f2', label:'הצלע שביניהן', unit:'ס"מ' },
+        { id:'f3', label:'זווית שנייה', unit:'מעלות' }
+      ],
+      solve: (v1, v2, v3) => solveASA(v1, v2, v3)
+    },
+    aaa: {
+      title: '3 זוויות',
+      fields: [
+        { id:'f1', label:'זווית ראשונה', unit:'מעלות' },
+        { id:'f2', label:'זווית שנייה', unit:'מעלות' },
+        { id:'f3', label:'זווית שלישית', unit:'מעלות' }
+      ],
+      solve: (v1, v2, v3) => solveAAA(v1, v2, v3)
+    }
+  };
+
+  let currentMode = 'sss';
+
+  // ---------- Build mode buttons ----------
+  const modesEl = document.getElementById('modes');
+  Object.keys(MODES).forEach(key => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'mode-btn' + (key === currentMode ? ' active' : '');
+    btn.textContent = MODES[key].title;
+    btn.dataset.mode = key;
+    btn.addEventListener('click', () => {
+      currentMode = key;
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      buildFields();
+      hideResult();
+    });
+    modesEl.appendChild(btn);
+  });
+
+  // ---------- Build input fields for current mode ----------
+  const fieldsEl = document.getElementById('fields');
+  function buildFields(){
+    fieldsEl.innerHTML = '';
+    MODES[currentMode].fields.forEach(f => {
+      const wrap = document.createElement('div');
+      wrap.className = 'field';
+      const label = document.createElement('label');
+      label.setAttribute('for', f.id);
+      label.innerHTML = f.label + ' <span class="unit">(' + f.unit + ')</span>';
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.id = f.id;
+      input.step = 'any';
+      input.min = '0';
+      input.placeholder = f.unit === 'מעלות' ? 'לדוגמה: 60' : 'לדוגמה: 5';
+      wrap.appendChild(label);
+      wrap.appendChild(input);
+      fieldsEl.appendChild(wrap);
+    });
+  }
+  buildFields();
+
+  // ---------- Result area ----------
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const errorBox = document.getElementById('error-box');
+
+  function hideResult(){
+    canvas.classList.remove('hidden');
+    errorBox.style.display = 'none';
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function showError(message){
+    canvas.classList.add('hidden');
+    errorBox.style.display = 'block';
+    errorBox.textContent = '😕 ' + message;
+  }
+
+  function showCanvas(){
+    canvas.classList.remove('hidden');
+    errorBox.style.display = 'none';
+  }
+
+  // ---------- Renderer ----------
+  function drawTriangle(t){
+    showCanvas();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const Arad = degToRad(t.A);
+    const pts = {
+      A: { x: 0, y: 0 },
+      B: { x: t.c, y: 0 },
+      C: { x: t.b * Math.cos(Arad), y: -t.b * Math.sin(Arad) }
+    };
+
+    const xs = [pts.A.x, pts.B.x, pts.C.x];
+    const ys = [pts.A.y, pts.B.y, pts.C.y];
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const shapeW = Math.max(maxX - minX, 0.0001);
+    const shapeH = Math.max(maxY - minY, 0.0001);
+
+    const padding = 70;
+    const scale = Math.min(
+      (canvas.width - 2 * padding) / shapeW,
+      (canvas.height - 2 * padding) / shapeH
+    );
+
+    const offsetX = canvas.width / 2 - scale * (minX + maxX) / 2;
+    const offsetY = canvas.height / 2 - scale * (minY + maxY) / 2;
+
+    function toScreen(p){
+      return { x: p.x * scale + offsetX, y: p.y * scale + offsetY };
+    }
+
+    const sA = toScreen(pts.A);
+    const sB = toScreen(pts.B);
+    const sC = toScreen(pts.C);
+
+    // Fill + stroke the triangle
+    ctx.beginPath();
+    ctx.moveTo(sA.x, sA.y);
+    ctx.lineTo(sB.x, sB.y);
+    ctx.lineTo(sC.x, sC.y);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(37, 99, 235, 0.12)';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#2563eb';
+    ctx.stroke();
+
+    // Vertex dots
+    [sA, sB, sC].forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#1d4ed8';
+      ctx.fill();
+    });
+
+    const centroid = {
+      x: (sA.x + sB.x + sC.x) / 3,
+      y: (sA.y + sB.y + sC.y) / 3
+    };
+
+    function labelAt(pos, text, color){
+      ctx.font = 'bold 16px Arial';
+      ctx.fillStyle = color || '#0f172a';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, pos.x, pos.y);
+    }
+
+    function outwardPoint(p1, p2, dist){
+      const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+      let dx = mid.x - centroid.x;
+      let dy = mid.y - centroid.y;
+      const len = Math.sqrt(dx*dx + dy*dy) || 1;
+      dx /= len; dy /= len;
+      return { x: mid.x + dx * dist, y: mid.y + dy * dist };
+    }
+
+    function inwardPoint(p, dist){
+      let dx = centroid.x - p.x;
+      let dy = centroid.y - p.y;
+      const len = Math.sqrt(dx*dx + dy*dy) || 1;
+      dx /= len; dy /= len;
+      return { x: p.x + dx * dist, y: p.y + dy * dist };
+    }
+
+    // Side labels: side a = B-C, side b = A-C, side c = A-B
+    labelAt(outwardPoint(sB, sC, 18), t.a.toFixed(1), '#0f172a');
+    labelAt(outwardPoint(sA, sC, 18), t.b.toFixed(1), '#0f172a');
+    labelAt(outwardPoint(sA, sB, 18), t.c.toFixed(1), '#0f172a');
+
+    // Angle labels near each vertex, pulled slightly inward
+    labelAt(inwardPoint(sA, 24), Math.round(t.A) + '°', '#ea580c');
+    labelAt(inwardPoint(sB, 24), Math.round(t.B) + '°', '#ea580c');
+    labelAt(inwardPoint(sC, 24), Math.round(t.C) + '°', '#ea580c');
+  }
+
+  // ---------- Form submit ----------
+  const form = document.getElementById('triangle-form');
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    const fieldDefs = MODES[currentMode].fields;
+    const values = fieldDefs.map(f => {
+      const raw = document.getElementById(f.id).value;
+      return raw === '' ? NaN : parseFloat(raw);
+    });
+
+    if(values.some(v => Number.isNaN(v))){
+      showError('כל השדות חייבים להיות מלאים במספר. נסה שוב!');
+      return;
+    }
+
+    const result = MODES[currentMode].solve(values[0], values[1], values[2]);
+    if(!result.valid){
+      showError(result.message);
+      return;
+    }
+    drawTriangle(result);
+  });
+
+})();
+</script>
+</body>
+</html>

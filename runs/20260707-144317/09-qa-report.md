@@ -1,0 +1,19 @@
+# QA report
+
+## 1. Verify the charge-and-release jump control works correctly across mouse, touch, and keyboard input, with longer charge producing a higher/longer jump.
+PASS - `apps/coin-jump-runner/index.html` wires all three input types to the same `beginPress()`/`endPress()` handlers: keydown/keyup on `Space` (lines 322-334), `mousedown`/`mouseup` (lines 336-337), and `touchstart`/`touchend`/`touchcancel` (lines 339-341). `endPress()` (lines 310-320) measures held time, clamps it to `MAX_CHARGE_MS` (550ms), and linearly interpolates `jumpVel` between `MIN_JUMP_VEL` (520) and `MAX_JUMP_VEL` (980) based on charge fraction, so a longer hold produces a higher launch velocity (and thus a higher/longer jump arc under constant `GRAVITY`).
+
+## 2. Verify obstacle collisions correctly trigger game over and coin collisions correctly increment the score.
+PASS - Block obstacles use AABB rectangle intersection against the player rect and call `endGame('You bumped into a rock!')` on overlap (lines 464-476). Gap obstacles are handled by letting the player fall through (`groundAvailableAt`, line 242) and triggering `endGame('You fell into a pit!')` once `player.y > H + 80` (lines 458-461). Coin collisions use a radius-sum distance check (lines 481-494) that sets `collected = true`, increments `score`, and updates `scoreDisplay.textContent` immediately.
+
+## 3. Verify the difficulty ramp increases speed/obstacle frequency over time without breaking collision or scrolling.
+PASS (static inspection only) - `speed` ramps via `clamp(BASE_SPEED + SPEED_RAMP * elapsed, BASE_SPEED, MAX_SPEED)` (line 407), and `spawnInterval()` shrinks both `minI`/`maxI` as `elapsed` grows, clamped to sane floors (750ms/1050ms) so spawns never overlap pathologically (lines 252-257). Collision and scroll math (lines 436-498, 544-593) is expressed uniformly in terms of `distance` and `worldX` regardless of current `speed`, so nothing in the ramp logic special-cases or bypasses collision/scroll code. No actual runtime/browser test was performed since this is a Phase 1 static review.
+
+## 4. Verify the game-over screen shows the correct score and restart fully resets the game state.
+PASS - `endGame()` (lines 387-395) sets `finalScoreEl.textContent = String(score)` and reveals `#gameover-overlay`. `restartGame()` (lines 397-400) hides that overlay and calls `resetState()` (lines 361-379), which zeroes `elapsed`, `distance`, `score`, resets `speed` to `BASE_SPEED`, repositions the player at `groundY - PLAYER_H` with `vy = 0` and `grounded = true`, clears `obstacles`/`coins` arrays, resets spawn timers, resets `scoreDisplay.textContent` to `'0'`, and hides the charge meter. This is a full reset of the tracked game state back to a fresh `'ready'` game.
+
+## 5. Verify the game runs smoothly in a browser with no backend/storage, matching the static GitHub Pages deployment target.
+PASS - The entire game is a single self-contained `apps/coin-jump-runner/index.html` file with inline `<style>` and `<script>` blocks; a search for `fetch(`, `XMLHttpRequest`, `localStorage`, `sessionStorage`, external `<script src>`/`<link rel>` tags returned no matches. All rendering is done via `requestAnimationFrame` and Canvas 2D with no server calls or persisted storage, consistent with a static GitHub Pages deployment. Note: "runs smoothly" (actual frame-rate/perf) cannot be confirmed without a real browser test; this is inferred from the absence of blocking operations, unbounded loops, or heavy allocations in the render/update path (dt is clamped to 0.05s per frame at line 711, and off-screen entities are filtered each frame at lines 497-498).
+
+## Overall
+PASS - All five testing tasks check out against the code in `apps/coin-jump-runner/index.html`. Caveat: this is Phase 1 static file inspection only, not actual browser-driven/interactive testing (no live verification of frame smoothness, real touch/mouse timing, or visual rendering was performed).

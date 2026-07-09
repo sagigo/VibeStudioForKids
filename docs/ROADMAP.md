@@ -43,54 +43,157 @@ blocked a non-default branch until manually allow-listed.
 **Why now:** every later role that talks to the kid (starting with
 Intake) depends on it; cheaper to build once and reuse than bolt on after
 Intake exists.
-**Status:** Not started
+**Status:** Done. `.claude/agents/translator.md` hardened for messy real
+kid input (typos, rambling, mixed Hebrew/English) rather than just the one
+fixed Phase 1 phrase, validated against several varied cases. Added a
+light content-safety screen on kid-authored input as its own dedicated
+`safety-check` agent run before Translator (see `docs/DECISIONS.md` for
+why it's a separate agent, not a mode of Translator). `studio-build`
+updated to call `safety-check` before `translator` on the way in, and halt
+the pipeline rather than proceed to Intake if flagged.
 
 ## Phase 3 — Intake (interactive)
 **Goal:** the real requirements-gathering conversation — clarifying
 questions posed as concrete, multiple-choice-style options, proactive
 surfacing of choices the kid may not have considered, and a "you decide"
 fallback that resolves to a reasonable default.
-**Status:** Not started
+**Status:** Done. `intake.md` rewritten as a stateless per-call decision
+agent (ask next question, or finalize) after discovering `AskUserQuestion`
+is unavailable inside subagents - `studio-build` drives the actual
+back-and-forth (translate question → ask → translate answer → call Intake
+again). Unit-tested against 5 synthetic transcripts covering vague/clear
+ideas, "surprise me" vs. "let's decide together", and the finalize path.
+Validated with one real live session: a kid-typed idea for a
+charge-and-release-jump coin-collecting runner game, including the kid
+explicitly saying "don't ask me any more questions" mid-idea, which Intake
+correctly honored. Ran the resulting requirement through the full existing
+pipeline (a real, non-trivial app, not Phase 1's static page) and deployed
+it for real: https://sagigo.github.io/VibeStudioForKids/coin-jump-runner/.
+Two more real bugs found and fixed along the way - see `docs/DECISIONS.md`.
 
 ## Phase 4 — Technical Specification
 **Goal:** turn a requirement into a concrete technical plan (app type,
 stack, storage needs) using generic judgment rather than per-app-type
 hardcoding.
-**Status:** Not started
+**Status:** Done. `tech-spec.md` deepened with a `Components` breakdown and
+a concrete `Storage` data model (proportional - skipped when trivial), and
+explicit handling for requirements that imply something GitHub Pages'
+static-only hosting can't do (a server, accounts, real-time cross-device
+sync): designs the closest static-only equivalent and states the tradeoff
+in a `Scope adjustments` section rather than silently building something
+different from what was asked. Tested across 4 varied requirement types
+(a storage-backed chore tracker, a game, and two requests implying a
+server - a shared leaderboard and real-time chat) - correctly skipped
+scope adjustments where none were needed and applied them with sensible,
+well-justified static-only redesigns where they were.
 
 ## Phase 5 — Task Planner
 **Goal:** split a spec into a concrete list of development and testing
 tasks.
-**Status:** Not started
+**Status:** Done. `task-planner.md` now maps development tasks directly to
+Tech Spec's `Components`/`Storage` structure (data model before things that
+read/write it, foundational mechanics before things that depend on them),
+respects `Scope adjustments` when present (builds the static-only version,
+not the original ask), and keeps testing tasks scoped to what QA can
+actually check today (static code inspection) - explicitly forbidding
+tasks that depend on a later pipeline stage (the Phase 1 "verify the
+deployed URL" mistake). Tested against 3 varied tech specs (storage-backed
+tracker, scope-adjusted leaderboard, multi-mechanic game) - correct
+dependency ordering and component mapping in all three, and the
+scope-adjusted case even added a task verifying no network code sneaks
+in, reinforcing Tech Spec's own scope-down decision.
 
 ## Phase 6 — Development + QA
 **Goal:** real implementation and testing — sequential, with a bounded
 feedback/retry loop between them (see `docs/DECISIONS.md`).
-**Status:** Not started
+**Status:** Done. QA upgraded from static-inspection-only to real live
+browser testing (headless Chromium via Playwright) for interactive/
+behavioral claims, keeping static inspection only for structural/absence
+claims it's actually better suited to. Developer gained a `fix` mode for
+targeted, QA-report-driven fixes instead of full rewrites. `studio-build`
+now runs a bounded retry loop (1 build + up to 3 fix cycles, 4 attempts
+total - user's explicit choice) between them instead of stopping cold on
+the first QA failure. Validated end to end on a deliberately broken toy
+app: QA caught a real bug via live interaction (button click not updating
+the DOM) with the exact root cause, Developer's fix mode changed exactly
+one line and touched nothing else, and QA's re-run genuinely passed via
+the same live interaction, not a rubber stamp.
 
 ## Phase 7 — Reviewer
 **Goal:** a final pass/fail-with-reason check against the original
 requirement before anything reaches Delivery.
-**Status:** Not started
+**Status:** Done. Found and fixed a real integration gap while deepening
+this: Reviewer previously only saw the original requirement, with no way
+to know Tech Spec (Phase 4) had legitimately scoped down a request - it
+would have wrongly failed a correctly-adjusted app for not doing something
+Tech Spec already explained why it wasn't building. `reviewer.md` now also
+reads the tech spec and judges against the adjusted scope when a `Scope
+adjustments` section is present, without re-litigating that decision.
+Tested across 3 scenarios: no adjustment + genuine gap -> correctly
+FAILed; adjustment present + incomplete build -> correctly FAILed, for
+real reasons unrelated to the adjustment (didn't let the adjustment become
+a blanket excuse); adjustment present + complete faithful build ->
+correctly PASSed. Also independently caught a QA-report/actual-app
+mismatch in one test fixture that wasn't even the thing being tested for.
 
 ## Phase 8 — Delivery (full)
 **Goal:** replace Phase 1's stub with the real thing — local build/run,
 then remote deployment to GitHub Pages, gated on the end user's explicit
 go-ahead.
-**Status:** Not started
+**Status:** Done. The "remote deployment, gated on go-ahead" half was
+already real since Phase 1 and proven repeatedly since; the actual gap
+was "local build/run" - stage 1 used to just check files exist. Delivery
+now actually serves the app locally and loads it with headless Chromium,
+confirms no console/page errors, and captures a real screenshot the end
+user sees before the gate - not just a text description. Tested on
+coin-jump-runner: produced a genuine, verified screenshot of the live app.
+Also hardened the deploy step for GitHub MCP tool unavailability
+(happened mid-session during this phase): the push itself doesn't depend
+on those tools and still works, only Actions-run verification does - the
+studio now says so plainly instead of blocking or silently claiming
+success/failure it can't back up.
 
 ## Phase 9 — Orchestrator hardening
 **Goal:** once every role's real shape is known, harden the coordinator:
 state tracking across phases, resumability after interruption, gate
 enforcement, retry bounds, error paths.
-**Status:** Not started (a stub Orchestrator exists from Phase 1)
+**Status:** Done. Orchestrator now initializes and can report on
+`runs/<run-id>/state.json` - a persisted record of current stage,
+completed stages, gate status, QA retry count, and halt reason, replacing
+the old static `plan.json` that never changed after being written.
+`studio-build` maintains it throughout the run: every halt path
+(safety flag, QA exhaustion, Review fail, unverifiable deploy) sets a
+specific `halted_reason` instead of just stopping; the Delivery gate is
+now actually checked (not just asked) before the real push happens.
+Tested both Orchestrator paths directly: a new run initializes valid
+state, and a synthetic mid-run state.json (simulating an interrupted
+session) is correctly read and reported on without being overwritten -
+the core mechanism resumability depends on.
 
 ## Phase 10 — Cross-domain validation
 **Goal:** confirm the pipeline is actually generic by running it
 end-to-end against clearly different app types (a game, a tracker, a
 form-based tool) and fixing anything that turns out to be secretly
 game-specific.
-**Status:** Not started
+**Status:** Done. Full live run for a math-education tool (not a game): a
+kid ("Moshiko," with real spelling mistakes in the original Hebrew) asked
+for a flexible triangle solver/drawer accepting any 3 of 6 known values
+(sides/angles) via SSS/SAS/ASA/AAA, computed with law of cosines/sines,
+rendered on a labeled canvas. Nothing in the pipeline turned out to be
+secretly game-shaped: Intake correctly handled a sophisticated free-text
+answer requesting full input flexibility and later correctly picked up on
+"you're nagging with questions" as a signal to stop and finalize; Tech
+Spec caught a genuine domain edge case (AAA input is scale-ambiguous) and
+handled it transparently; QA verified the actual trigonometry numerically
+in a live browser, not just that a page loads. Deployed successfully:
+https://sagigo.github.io/VibeStudioForKids/triangle-drawer/
+
+This run also surfaced a real, serious bug unrelated to genericity - see
+`docs/DECISIONS.md` ("Deploy must be an explicit trigger, never implied by
+a push"): an ordinary progress-commit made during the run accidentally
+published the app hours before Review or the human gate, because the
+deploy workflow triggered on any push touching `apps/**` regardless of
+why. Fixed the same day it was found.
 
 ---
 

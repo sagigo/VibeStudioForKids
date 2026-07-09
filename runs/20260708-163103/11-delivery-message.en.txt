@@ -1,0 +1,8 @@
+Hi Moshiko!
+
+Your Triangle Drawer is done and ready to use! It's a fun tool for playing with triangles: you tell it any 3 things you know about a triangle (like two sides and an angle, or three sides), and it figures out everything else and draws the whole triangle for you, with all the sides and angles labeled. It's like magic math that turns numbers into a picture!
+
+Here's your link, try it out:
+https://sagigo.github.io/VibeStudioForKids/triangle-drawer/
+
+Have fun drawing triangles!

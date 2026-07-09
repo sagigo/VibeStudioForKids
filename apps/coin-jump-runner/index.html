@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>קפיצה למטבעות</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #7fd6ff;
+    font-family: 'Trebuchet MS', 'Comic Sans MS', Verdana, sans-serif;
+    touch-action: none;
+    user-select: none;
+  }
+  #game-wrap {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    cursor: pointer;
+  }
+  .hud {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    font-size: clamp(18px, 4vw, 28px);
+    font-weight: bold;
+    color: #ffffff;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.25), 0 0 6px rgba(0,0,0,0.15);
+    pointer-events: none;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hud .coin-icon {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff6c8, #ffd93d 55%, #e0a800 100%);
+    border: 2px solid #b8860b;
+  }
+  .charge-meter-wrap {
+    position: absolute;
+    top: 14px;
+    left: 16px;
+    width: clamp(90px, 24vw, 160px);
+    height: 16px;
+    background: rgba(255,255,255,0.35);
+    border: 2px solid rgba(255,255,255,0.8);
+    border-radius: 10px;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .charge-meter-wrap.visible { opacity: 1; }
+  .charge-meter-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(270deg, #ffe066, #ff9f43, #ff6b6b);
+    border-radius: 0 8px 8px 0;
+  }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    background: rgba(20, 30, 60, 0.55);
+    color: #fff;
+    text-align: center;
+    z-index: 10;
+    padding: 20px;
+  }
+  .overlay.hidden { display: none; }
+  .panel {
+    background: linear-gradient(180deg, #fff8e6, #ffe9b0);
+    color: #4a3a1a;
+    border-radius: 22px;
+    padding: 28px 34px;
+    box-shadow: 0 12px 0 rgba(0,0,0,0.15), 0 18px 30px rgba(0,0,0,0.25);
+    max-width: 92vw;
+    border: 4px solid #ffcf5c;
+  }
+  .panel h1 {
+    margin: 0 0 8px;
+    font-size: clamp(24px, 6vw, 36px);
+    color: #ff6b35;
+    text-shadow: 2px 2px 0 #fff2d0;
+  }
+  .panel p {
+    margin: 6px 0;
+    font-size: clamp(14px, 3.2vw, 18px);
+    line-height: 1.4;
+  }
+  .panel .score-line {
+    font-size: clamp(20px, 5vw, 30px);
+    font-weight: bold;
+    color: #2a9d8f;
+    margin: 14px 0;
+  }
+  .btn {
+    margin-top: 14px;
+    font-family: inherit;
+    font-size: clamp(16px, 4vw, 22px);
+    font-weight: bold;
+    color: #fff;
+    background: linear-gradient(180deg, #6bcB77, #38a169);
+    border: none;
+    border-radius: 14px;
+    padding: 12px 28px;
+    box-shadow: 0 6px 0 #2c7a4b;
+    cursor: pointer;
+    transition: transform 0.05s ease;
+  }
+  .btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #2c7a4b;
+  }
+  .hint {
+    font-size: clamp(12px, 2.8vw, 15px);
+    opacity: 0.8;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+<div id="game-wrap">
+  <canvas id="game"></canvas>
+
+  <div class="hud">
+    <span class="coin-icon"></span><span id="score-display">0</span>
+  </div>
+
+  <div class="charge-meter-wrap" id="charge-wrap">
+    <div class="charge-meter-fill" id="charge-fill"></div>
+  </div>
+
+  <div class="overlay" id="start-overlay">
+    <div class="panel">
+      <h1>קפיצה למטבעות!</h1>
+      <p>החבר שלך רץ לבד &mdash; אתם רק צריכים לגרום לו לקפוץ!</p>
+      <p><strong>לחצו והחזיקו</strong> על הכפתור (או על מקש הרווח) כדי לטעון קפיצה.<br><strong>שחררו</strong> כדי לקפוץ &mdash; ככל שתחזיקו זמן רב יותר, כך תקפצו גבוה יותר!</p>
+      <p>אספו מטבעות נוצצים וקפצו מעל סלעים ובורות.</p>
+      <button class="btn" id="start-btn">הקישו כדי להתחיל</button>
+      <div class="hint">עובד עם מקלדת, עכבר או מגע</div>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="gameover-overlay">
+    <div class="panel">
+      <h1>אופס!</h1>
+      <p id="gameover-reason">נפלתם ונתקלתם.</p>
+      <div class="score-line">מטבעות שנאספו: <span id="final-score">0</span></div>
+      <button class="btn" id="restart-btn">שחקו שוב</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Canvas setup ----------
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var wrap = document.getElementById('game-wrap');
+  var DPR = Math.min(window.devicePixelRatio || 1, 2);
+  var W = 0, H = 0; // logical (CSS) pixel dimensions
+
+  function resize() {
+    W = wrap.clientWidth;
+    H = wrap.clientHeight;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    GROUND_HEIGHT = Math.max(70, Math.round(H * 0.16));
+    groundY = H - GROUND_HEIGHT;
+    PLAYER_X = Math.max(90, Math.min(150, Math.round(W * 0.15)));
+  }
+
+  // ---------- Constants ----------
+  var GROUND_HEIGHT = 90;
+  var groundY = 0;
+  var PLAYER_X = 130;
+  var PLAYER_W = 42, PLAYER_H = 56;
+
+  var GRAVITY = 2000;            // px/s^2
+  var MIN_JUMP_VEL = 520;        // px/s (tiny tap)
+  var MAX_JUMP_VEL = 980;        // px/s (full charge)
+  var MAX_CHARGE_MS = 550;       // cap on charge time
+
+  var BASE_SPEED = 250;          // px/s at start
+  var SPEED_RAMP = 3.4;          // px/s gained per second elapsed
+  var MAX_SPEED = 620;
+
+  // ---------- Game state ----------
+  var state = 'ready'; // 'ready' | 'playing' | 'gameover'
+  var elapsed = 0;
+  var distance = 0;
+  var speed = BASE_SPEED;
+  var score = 0;
+
+  var player = {
+    y: 0,
+    vy: 0,
+    grounded: true,
+    squash: 1
+  };
+
+  var isCharging = false;
+  var chargeStart = 0;
+  var chargeFrac = 0;
+
+  var obstacles = []; // {worldX, width, type:'gap'|'block', height}
+  var coins = [];      // {worldX, yOffset, r, collected, bob}
+
+  var obstacleTimer = 0;
+  var coinTimer = 0;
+
+  var lastTime = null;
+
+  // ---------- Helpers ----------
+  function rand(min, max) { return min + Math.random() * (max - min); }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+  function groundAvailableAt(worldX) {
+    for (var i = 0; i < obstacles.length; i++) {
+      var o = obstacles[i];
+      if (o.type === 'gap' && worldX >= o.worldX && worldX <= o.worldX + o.width) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function spawnInterval() {
+    var t = elapsed;
+    var minI = clamp(1500 - t * 24, 750, 1500);
+    var maxI = clamp(2200 - t * 26, 1050, 2200);
+    return rand(minI, maxI);
+  }
+
+  function spawnObstacle() {
+    var aheadX = distance + W + rand(60, 160);
+    var type = Math.random() < 0.5 ? 'gap' : 'block';
+    if (type === 'gap') {
+      var gw = rand(70, 130 + Math.min(elapsed * 1.2, 90));
+      obstacles.push({ worldX: aheadX, width: gw, type: 'gap' });
+    } else {
+      var bw = rand(34, 46);
+      var bh = rand(38, 66);
+      obstacles.push({ worldX: aheadX, width: bw, type: 'block', height: bh });
+    }
+  }
+
+  function spawnCoinGroup() {
+    var aheadX = distance + W + rand(40, 140);
+    var pattern = Math.floor(rand(0, 3));
+    var count = Math.floor(rand(3, 6));
+    var spacing = 42;
+    for (var i = 0; i < count; i++) {
+      var yOff;
+      if (pattern === 0) { // low line, near running height
+        yOff = 18;
+      } else if (pattern === 1) { // arc
+        var mid = (count - 1) / 2;
+        var d = Math.abs(i - mid) / (mid || 1);
+        yOff = 40 + (1 - d) * 95;
+      } else { // high row, needs a good jump
+        yOff = 115;
+      }
+      coins.push({
+        worldX: aheadX + i * spacing,
+        yOffset: yOff,
+        r: 11,
+        collected: false,
+        bob: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  // ---------- Input ----------
+  function beginPress() {
+    if (state === 'gameover') return;
+    if (state === 'ready') {
+      startGame();
+    }
+    if (state === 'playing' && player.grounded && !isCharging) {
+      isCharging = true;
+      chargeStart = performance.now();
+    }
+  }
+
+  function endPress() {
+    if (state !== 'playing' || !isCharging) return;
+    isCharging = false;
+    var held = performance.now() - chargeStart;
+    held = clamp(held, 0, MAX_CHARGE_MS);
+    var frac = held / MAX_CHARGE_MS;
+    var jumpVel = MIN_JUMP_VEL + frac * (MAX_JUMP_VEL - MIN_JUMP_VEL);
+    player.vy = -jumpVel;
+    player.grounded = false;
+    chargeFrac = 0;
+  }
+
+  window.addEventListener('keydown', function (e) {
+    if (e.code === 'Space' || e.key === ' ') {
+      e.preventDefault();
+      if (e.repeat) return;
+      beginPress();
+    }
+  });
+  window.addEventListener('keyup', function (e) {
+    if (e.code === 'Space' || e.key === ' ') {
+      e.preventDefault();
+      endPress();
+    }
+  });
+
+  canvas.addEventListener('mousedown', function (e) { e.preventDefault(); beginPress(); });
+  window.addEventListener('mouseup', function () { endPress(); });
+
+  canvas.addEventListener('touchstart', function (e) { e.preventDefault(); beginPress(); }, { passive: false });
+  canvas.addEventListener('touchend', function (e) { e.preventDefault(); endPress(); }, { passive: false });
+  canvas.addEventListener('touchcancel', function (e) { e.preventDefault(); endPress(); }, { passive: false });
+
+  document.getElementById('start-btn').addEventListener('click', function (e) {
+    e.preventDefault();
+    startGame();
+  });
+  document.getElementById('restart-btn').addEventListener('click', function (e) {
+    e.preventDefault();
+    restartGame();
+  });
+
+  // ---------- State transitions ----------
+  var startOverlay = document.getElementById('start-overlay');
+  var gameoverOverlay = document.getElementById('gameover-overlay');
+  var scoreDisplay = document.getElementById('score-display');
+  var finalScoreEl = document.getElementById('final-score');
+  var reasonEl = document.getElementById('gameover-reason');
+  var chargeWrap = document.getElementById('charge-wrap');
+  var chargeFill = document.getElementById('charge-fill');
+
+  function resetState() {
+    state = 'ready';
+    elapsed = 0;
+    distance = 0;
+    speed = BASE_SPEED;
+    score = 0;
+    player.y = groundY - PLAYER_H;
+    player.vy = 0;
+    player.grounded = true;
+    player.squash = 1;
+    isCharging = false;
+    chargeFrac = 0;
+    obstacles = [];
+    coins = [];
+    obstacleTimer = rand(900, 1400);
+    coinTimer = rand(500, 900);
+    scoreDisplay.textContent = '0';
+    chargeWrap.classList.remove('visible');
+  }
+
+  function startGame() {
+    if (state === 'playing') return;
+    state = 'playing';
+    startOverlay.classList.add('hidden');
+  }
+
+  function endGame(reason) {
+    if (state === 'gameover') return;
+    state = 'gameover';
+    isCharging = false;
+    reasonEl.textContent = reason;
+    finalScoreEl.textContent = String(score);
+    gameoverOverlay.classList.remove('hidden');
+    chargeWrap.classList.remove('visible');
+  }
+
+  function restartGame() {
+    gameoverOverlay.classList.add('hidden');
+    resetState();
+  }
+
+  // ---------- Update ----------
+  function update(dt) {
+    if (state !== 'playing') return;
+
+    elapsed += dt;
+    speed = clamp(BASE_SPEED + SPEED_RAMP * elapsed, BASE_SPEED, MAX_SPEED);
+    distance += speed * dt;
+
+    obstacleTimer -= dt * 1000;
+    if (obstacleTimer <= 0) {
+      spawnObstacle();
+      obstacleTimer = spawnInterval();
+    }
+    coinTimer -= dt * 1000;
+    if (coinTimer <= 0) {
+      spawnCoinGroup();
+      coinTimer = rand(1100, 1900);
+    }
+
+    // charge meter visuals
+    if (isCharging) {
+      var held = clamp(performance.now() - chargeStart, 0, MAX_CHARGE_MS);
+      chargeFrac = held / MAX_CHARGE_MS;
+      chargeWrap.classList.add('visible');
+      chargeFill.style.width = Math.round(chargeFrac * 100) + '%';
+    } else {
+      chargeWrap.classList.remove('visible');
+      chargeFill.style.width = '0%';
+    }
+
+    // physics
+    player.vy += GRAVITY * dt;
+    player.y += player.vy * dt;
+
+    var playerWorldX = distance + PLAYER_X;
+    var groundHere = groundAvailableAt(playerWorldX + PLAYER_W * 0.5);
+    var floorY = groundY - PLAYER_H;
+
+    if (player.y >= floorY) {
+      if (groundHere) {
+        player.y = floorY;
+        player.vy = 0;
+        if (!player.grounded) { player.squash = 1.25; }
+        player.grounded = true;
+      } else {
+        player.grounded = false; // falling through a gap
+      }
+    } else {
+      player.grounded = false;
+    }
+
+    if (player.squash > 1) {
+      player.squash -= dt * 2.2;
+      if (player.squash < 1) player.squash = 1;
+    }
+
+    if (player.y > H + 80) {
+      endGame('נפלתם לתוך בור!');
+      return;
+    }
+
+    // collisions with blocks
+    var pRect = { x: PLAYER_X + 6, y: player.y + 4, w: PLAYER_W - 12, h: PLAYER_H - 6 };
+    for (var i = 0; i < obstacles.length; i++) {
+      var o = obstacles[i];
+      if (o.type !== 'block') continue;
+      var sx = o.worldX - distance;
+      if (sx > W + 50 || sx + o.width < -50) continue;
+      var oRect = { x: sx, y: groundY - o.height, w: o.width, h: o.height };
+      if (pRect.x < oRect.x + oRect.w && pRect.x + pRect.w > oRect.x &&
+          pRect.y < oRect.y + oRect.h && pRect.y + pRect.h > oRect.y) {
+        endGame('התנגשתם בסלע!');
+        return;
+      }
+    }
+
+    // coin collisions
+    var pcx = PLAYER_X + PLAYER_W / 2;
+    var pcy = player.y + PLAYER_H / 2;
+    for (var j = 0; j < coins.length; j++) {
+      var c = coins[j];
+      if (c.collected) continue;
+      var csx = c.worldX - distance;
+      var csy = groundY - c.yOffset - c.r;
+      var dx = pcx - csx, dy = pcy - csy;
+      var dist2 = dx * dx + dy * dy;
+      var rr = (c.r + PLAYER_W * 0.32);
+      if (dist2 < rr * rr) {
+        c.collected = true;
+        score += 1;
+        scoreDisplay.textContent = String(score);
+      }
+    }
+
+    // cleanup off-screen entities
+    obstacles = obstacles.filter(function (o) { return (o.worldX + o.width) - distance > -80; });
+    coins = coins.filter(function (c) { return !c.collected && (c.worldX - distance) > -80; });
+  }
+
+  // ---------- Render ----------
+  function drawBackground(t) {
+    var grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#8fe0ff');
+    grad.addColorStop(1, '#d7f5ff');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // sun
+    ctx.fillStyle = '#fff6b0';
+    ctx.beginPath();
+    ctx.arc(W - 70, 70, 40, 0, Math.PI * 2);
+    ctx.fill();
+
+    // clouds (slow parallax)
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    var cloudOffset = (distance * 0.12) % (W + 200);
+    for (var i = 0; i < 4; i++) {
+      var cx = (i * 260 - cloudOffset) % (W + 260);
+      if (cx < -100) cx += (W + 260);
+      drawCloud(cx, 60 + (i % 2) * 40);
+    }
+
+    // hills (mid parallax)
+    ctx.fillStyle = '#bdeeb0';
+    var hillOffset = (distance * 0.35) % (W + 300);
+    for (var h = 0; h < 3; h++) {
+      var hx = (h * 320 - hillOffset) % (W + 300);
+      if (hx < -150) hx += (W + 300);
+      ctx.beginPath();
+      ctx.ellipse(hx, groundY + 10, 160, 60, 0, Math.PI, 0);
+      ctx.fill();
+    }
+  }
+
+  function drawCloud(x, y) {
+    ctx.beginPath();
+    ctx.arc(x, y, 18, 0, Math.PI * 2);
+    ctx.arc(x + 20, y - 8, 16, 0, Math.PI * 2);
+    ctx.arc(x + 38, y, 18, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawGround() {
+    // base ground strip
+    ctx.fillStyle = '#7bcf6b';
+    ctx.fillRect(0, groundY, W, GROUND_HEIGHT);
+    ctx.fillStyle = '#5fae52';
+    ctx.fillRect(0, groundY, W, 8);
+
+    // dashed motion lines to sell scroll speed
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([18, 22]);
+    ctx.beginPath();
+    var lineOffset = distance % 40;
+    ctx.moveTo(-40 + -lineOffset, groundY + GROUND_HEIGHT * 0.55);
+    ctx.lineTo(W, groundY + GROUND_HEIGHT * 0.55);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // punch out gaps
+    for (var i = 0; i < obstacles.length; i++) {
+      var o = obstacles[i];
+      if (o.type !== 'gap') continue;
+      var sx = o.worldX - distance;
+      if (sx > W + 20 || sx + o.width < -20) continue;
+      var pitGrad = ctx.createLinearGradient(0, groundY, 0, H);
+      pitGrad.addColorStop(0, '#2b3a67');
+      pitGrad.addColorStop(1, '#111a33');
+      ctx.fillStyle = pitGrad;
+      ctx.fillRect(sx, groundY, o.width, H - groundY);
+      // grass tuft edges
+      ctx.fillStyle = '#5fae52';
+      ctx.fillRect(sx - 4, groundY, 6, 10);
+      ctx.fillRect(sx + o.width - 2, groundY, 6, 10);
+    }
+
+    // blocks
+    for (var j = 0; j < obstacles.length; j++) {
+      var b = obstacles[j];
+      if (b.type !== 'block') continue;
+      var bx = b.worldX - distance;
+      if (bx > W + 20 || bx + b.width < -20) continue;
+      var by = groundY - b.height;
+      ctx.fillStyle = '#a9744f';
+      roundRect(bx, by, b.width, b.height, 6);
+      ctx.fill();
+      ctx.fillStyle = '#8c5c3c';
+      roundRect(bx, by, b.width, 6, 3);
+      ctx.fill();
+    }
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function drawCoins(t) {
+    for (var i = 0; i < coins.length; i++) {
+      var c = coins[i];
+      if (c.collected) continue;
+      var sx = c.worldX - distance;
+      if (sx > W + 30 || sx < -30) continue;
+      var sy = groundY - c.yOffset - Math.sin(t / 220 + c.bob) * 4;
+      var squeeze = Math.abs(Math.cos(t / 260 + c.bob));
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.scale(Math.max(0.25, squeeze), 1);
+      var g = ctx.createRadialGradient(-3, -3, 1, 0, 0, c.r);
+      g.addColorStop(0, '#fff6c8');
+      g.addColorStop(0.6, '#ffd93d');
+      g.addColorStop(1, '#e0a800');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, c.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#b8860b';
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawPlayer(t) {
+    var x = PLAYER_X, y = player.y;
+    var w = PLAYER_W, h = PLAYER_H;
+    var squashX = player.squash;
+    var squashY = 2 - player.squash;
+
+    ctx.save();
+    ctx.translate(x + w / 2, y + h);
+    ctx.scale(squashX, squashY);
+    ctx.translate(-(w / 2), -h);
+
+    // legs
+    var runPhase = player.grounded ? Math.sin(distance / 9) : 0;
+    ctx.fillStyle = '#2f4858';
+    if (player.grounded) {
+      ctx.fillRect(w * 0.12, h - 16 + runPhase * 4, 9, 16 - runPhase * 4);
+      ctx.fillRect(w * 0.58, h - 16 - runPhase * 4, 9, 16 + runPhase * 4);
+    } else {
+      ctx.fillRect(w * 0.14, h - 12, 9, 12);
+      ctx.fillRect(w * 0.58, h - 12, 9, 12);
+    }
+
+    // body
+    ctx.fillStyle = '#ff6b6b';
+    roundRect(w * 0.08, h * 0.32, w * 0.84, h * 0.46, 10);
+    ctx.fill();
+
+    // backpack strap detail
+    ctx.fillStyle = '#e14e4e';
+    ctx.fillRect(w * 0.08, h * 0.32, w * 0.84, 6);
+
+    // head
+    ctx.fillStyle = '#ffd6a5';
+    ctx.beginPath();
+    ctx.arc(w / 2, h * 0.24, w * 0.36, 0, Math.PI * 2);
+    ctx.fill();
+
+    // hair
+    ctx.fillStyle = '#5c3a21';
+    ctx.beginPath();
+    ctx.arc(w / 2, h * 0.14, w * 0.38, Math.PI, 0);
+    ctx.fill();
+
+    // eye
+    ctx.fillStyle = '#2f2f2f';
+    ctx.beginPath();
+    ctx.arc(w * 0.66, h * 0.24, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // smile
+    ctx.strokeStyle = '#8a4b2f';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(w * 0.58, h * 0.28, 5, 0.1, Math.PI - 0.1);
+    ctx.stroke();
+
+    // arm swings with charge/run
+    ctx.fillStyle = '#ffd6a5';
+    var armLift = isCharging ? -6 : (player.grounded ? runPhase * 5 : -8);
+    ctx.save();
+    ctx.translate(w * 0.86, h * 0.42);
+    ctx.rotate(armLift * 0.05);
+    ctx.fillRect(-3, 0, 7, 16);
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  function render(t) {
+    ctx.clearRect(0, 0, W, H);
+    drawBackground(t);
+    drawGround();
+    drawCoins(t);
+    drawPlayer(t);
+  }
+
+  // ---------- Main loop ----------
+  function frame(now) {
+    if (lastTime === null) lastTime = now;
+    var dt = (now - lastTime) / 1000;
+    dt = clamp(dt, 0, 0.05);
+    lastTime = now;
+
+    update(dt);
+    render(now);
+
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', function () {
+    var wasReady = state === 'ready';
+    resize();
+    if (wasReady) player.y = groundY - PLAYER_H;
+  });
+
+  // ---------- Init ----------
+  resize();
+  resetState();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

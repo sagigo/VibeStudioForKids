@@ -1,0 +1,14 @@
+{
+  "stages": [
+    { "id": "translate-in", "role": "translator", "gate": false },
+    { "id": "intake", "role": "intake", "gate": false },
+    { "id": "tech-spec", "role": "tech-spec", "gate": false },
+    { "id": "task-planning", "role": "task-planner", "gate": false },
+    { "id": "development", "role": "developer", "gate": false },
+    { "id": "qa", "role": "qa", "gate": false },
+    { "id": "review", "role": "reviewer", "gate": false },
+    { "id": "delivery-local", "role": "delivery", "gate": false },
+    { "id": "delivery-deploy", "role": "delivery", "gate": "human-confirmation-required-before-public-deploy" },
+    { "id": "translate-out", "role": "translator", "gate": false }
+  ]
+}

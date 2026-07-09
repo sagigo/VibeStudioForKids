@@ -195,6 +195,23 @@ published the app hours before Review or the human gate, because the
 deploy workflow triggered on any push touching `apps/**` regardless of
 why. Fixed the same day it was found.
 
+## Phase 11 — Post-review improvements (vs. claude-sub-agent)
+**Goal:** structured review of the whole studio against the
+claude-sub-agent reference; obvious fixes applied directly, non-obvious
+changes picked explicitly by the user from a numbered list.
+**Scope landed:** stale docs fixed (README/AGENT.md/CLAUDE.md - fresh
+sessions weren't even loading AGENT.md before); task-planner/QA
+contradiction fixed; Developer now receives the requirement it's judged
+against; new `designer` agent producing a per-app style spec; new
+`studio-update` skill for changing existing apps (Developer `update`
+mode, delta tech specs, regression-aware QA); Developer+QA bumped to a
+stronger model; Orchestrator close-out validation (artifact-existence
+check + `closeout.json`) before every hand-back; the parked
+numeric-vs-pass/fail gate question resolved in favor of pass/fail.
+**Status:** Done. Designer and close-out validated against the Phase 10
+run's real artifacts. Not yet exercised in a full live run - the next
+`studio-build` / `studio-update` run is the real validation.
+
 ---
 
 All 10 originally-planned phases are done. The thin-slice-first approach

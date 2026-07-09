@@ -1,13 +1,13 @@
 ---
 name: studio-build
-description: Vibe Studio for Kids - main entry point. Asks the kid what they want to build, in whatever language they use, runs a real interactive Intake conversation to clarify it, then the rest of the pipeline (Tech Spec -> Task Planner -> Developer -> QA -> Reviewer -> Delivery), pausing at the Delivery gate for the end user's explicit go-ahead before anything is deployed publicly to GitHub Pages.
+description: Vibe Studio for Kids - main entry point for building a NEW app. Asks the kid what they want to build, in whatever language they use, runs a real interactive Intake conversation to clarify it, then the rest of the pipeline (Tech Spec -> Task Planner -> Designer -> Developer -> QA -> Reviewer -> Delivery), pausing at the Delivery gate for the end user's explicit go-ahead before anything is deployed publicly to GitHub Pages. To change an app that already exists, use studio-update instead.
 ---
 
 # Studio build
 
-This is the studio's entry point. Every role below is a real, standalone,
-fully-implemented agent (see `.claude/agents/`) - no stubs remain as of
-Phase 10. Follow these steps in order.
+This is the studio's entry point for new apps. Every role below is a real,
+standalone, fully-implemented agent (see `.claude/agents/`). Follow these
+steps in order.
 
 The studio doesn't assume the kid's language - Translator detects it from
 their first message and that detected language is used for everything
@@ -65,8 +65,8 @@ Only if `flagged` is `false`, invoke the `translator` agent: input
 `02-request.en.txt.lang.json` it writes (`language_code`, `language_name`,
 `rtl`) - this is the kid's language for the rest of the run. Write it into
 `state.json`'s `kid_language`. Keep it handy; you'll pass it to
-`translator` (as the `en-><lang>` target) and to `developer` for the rest
-of this run.
+`translator` (as the `en-><lang>` target), `designer`, and `developer` for
+the rest of this run.
 
 ## 4. Interactive Intake loop
 
@@ -114,7 +114,14 @@ Invoke the `tech-spec` agent: input `04-requirement.md`, output
 Invoke the `task-planner` agent: input `05-tech-spec.md`, output
 `runs/<run-id>/06-tasks.md`.
 
-## 7. Pick an app slug
+## 7. Designer
+
+Invoke the `designer` agent: inputs `04-requirement.md` and
+`05-tech-spec.md`, the kid's language and its `rtl` flag, output
+`runs/<run-id>/07-style-spec.md`. This makes visual quality a designed
+input to Development rather than whatever Developer improvises.
+
+## 8. Pick an app slug
 
 Derive a short, readable, lowercase-hyphenated slug (2-4 words, in
 English regardless of the kid's language - it's a URL path, not
@@ -123,25 +130,24 @@ kid-facing text) from the requirement's Summary line, e.g.
 Target app directory is `apps/<slug>/`. Write it into `state.json`'s
 `app_slug`.
 
-## 8-9. Development + QA - bounded retry loop
+## 9-10. Development + QA - bounded retry loop
 
 Up to 4 total Developer attempts (1 build + up to 3 fix cycles). Track the
 attempt number as you go.
 
 1. **Attempt 1 (build mode):** invoke the `developer` agent, mode `build`:
-   inputs `04-requirement.md`, `05-tech-spec.md` and `06-tasks.md`, target
-   app directory `apps/<slug>/`, the kid's language and its `rtl` flag
-   (from step 3's sidecar), and have it write
-   `runs/<run-id>/07-dev-notes.md`. All UI text the kid will see must be
-   in the kid's language, not English - this is Developer's job, not a
-   separate localization pass.
+   inputs `04-requirement.md`, `05-tech-spec.md`, `07-style-spec.md` and
+   `06-tasks.md`, target app directory `apps/<slug>/`, the kid's language
+   and its `rtl` flag, and have it write `runs/<run-id>/08-dev-notes.md`.
+   All UI text the kid will see must be in the kid's language, not
+   English - this is Developer's job, not a separate localization pass.
 2. Invoke the `qa` agent: inputs `06-tasks.md` and the app directory,
-   output `runs/<run-id>/08-qa-report-<attempt>.md` (one file per attempt,
-   so the history isn't overwritten - e.g. `08-qa-report-1.md`). Increment
+   output `runs/<run-id>/09-qa-report-<attempt>.md` (one file per attempt,
+   so the history isn't overwritten - e.g. `09-qa-report-1.md`). Increment
    `state.json`'s `qa_attempts` each time you reach this step.
-3. If QA's overall verdict is PASS, continue to step 10 (Reviewer), using
-   this attempt's QA report as `08-qa-report.md` (copy or reference the
-   winning attempt's file under that name, since later steps expect it).
+3. If QA's overall verdict is PASS, continue to step 11 (Reviewer), using
+   this attempt's QA report as `09-qa-report.md` (copy the winning
+   attempt's file under that name, since later steps expect it).
 4. If FAIL and attempts remain (fewer than 4 total so far): invoke
    `developer` again, mode `fix` - same inputs as attempt 1, plus this
    attempt's QA report path. Go back to step 2 for the next attempt.
@@ -152,47 +158,46 @@ attempt number as you go.
    (from the last QA report), and that it needs human attention - this is
    a real, bounded give-up, not a silent failure.
 
-## 10. Reviewer
+## 11. Reviewer
 
 Invoke the `reviewer` agent: inputs `04-requirement.md`, `05-tech-spec.md`
 (so it can see any `Scope adjustments` and judge against the adjusted
-scope, not blindly the original ask), `08-qa-report.md`, and the app
-directory, output `runs/<run-id>/09-review.md`. If it fails, set
+scope, not blindly the original ask), `09-qa-report.md`, and the app
+directory, output `runs/<run-id>/10-review.md`. If it fails, set
 `state.json`'s `status` to `halted_review_fail` and `halted_reason` to the
 review's reasoning, stop, and report to the user.
 
-## 11. Delivery - stage 1 (local)
+## 12. Delivery - stage 1 (local)
 
 Invoke the `delivery` agent (stage 1 / local build report): inputs
-`09-review.md` and the app directory, output
-`runs/<run-id>/10-delivery-local.md`. It actually runs the app locally and
+`10-review.md` and the app directory, output
+`runs/<run-id>/11-delivery-local.md`. It actually runs the app locally and
 saves a screenshot at `runs/<run-id>/preview.png` - use `SendUserFile` to
 show that screenshot to the end user before the gate below, so "what was
 built" isn't just a text description.
 
-## 12. The gate - stop and ask
+## 13. The gate - stop and ask
 
-This is the one step that is not a stub. Show the screenshot from step 11,
-and summarize for the end user in plain terms: what was built, that QA and
-Review both passed, and that the local run was clean. Then use
-`AskUserQuestion` to ask explicit go/no-go: do they want this made public
-on a real shareable GitHub Pages link, yes or no. Do not proceed past this
-point without an explicit yes - this is the Delivery gate the roadmap
-calls out by name. On yes, mark the `delivery-deploy-gate` entry in
-`state.json`'s `gates` as `passed: true` before continuing - this is the
-one flag that actually authorizes step 13's push, so set it deliberately,
-not as an afterthought.
+Show the screenshot from step 12, and summarize for the end user in plain
+terms: what was built, that QA and Review both passed, and that the local
+run was clean. Then use `AskUserQuestion` to ask explicit go/no-go: do
+they want this made public on a real shareable GitHub Pages link, yes or
+no. Do not proceed past this point without an explicit yes - this is the
+Delivery gate the roadmap calls out by name. On yes, mark the
+`delivery-deploy-gate` entry in `state.json`'s `gates` as `passed: true`
+before continuing - this is the one flag that actually authorizes step
+14's deploy, so set it deliberately, not as an afterthought.
 
-## 13. Deploy (only after explicit yes)
+## 14. Deploy (only after explicit yes)
 
-This part is deliberately **not** delegated to the Delivery agent - it's a
-real push to the remote, so it happens here in the open, in the main
-conversation, where the user can see exactly what's being pushed.
+This part is deliberately **not** delegated to the Delivery agent - it's
+what makes the app public, so it happens here in the open, in the main
+conversation, where the user can see exactly what's happening.
 
 **Before doing anything else in this step**, check `state.json`'s
 `delivery-deploy-gate.passed` is actually `true`. If it isn't (state got
 out of sync somehow, or you're resuming a run and this step was reached
-some other way), stop and re-ask the gate rather than pushing - this
+some other way), stop and re-ask the gate rather than deploying - this
 check is the real enforcement behind the gate, not just the earlier
 prose asking you nicely.
 
@@ -200,20 +205,19 @@ prose asking you nicely.
   committed).
 - Commit with a clear message.
 - Push to the current branch with `git push -u origin <branch>`. This step
-  (making it public) doesn't depend on the GitHub MCP tools at all - it's
-  plain git over the already-authenticated remote, so it still works even
-  if those tools are disconnected.
+  doesn't depend on the GitHub MCP tools - it's plain git over the
+  already-authenticated remote.
 - **The push by itself does not deploy anything.**
   `.github/workflows/deploy-pages.yml` only triggers on `workflow_dispatch`
   now, deliberately - it used to auto-trigger on any push touching
   `apps/**`, which meant ordinary progress-commits made *during* the run
-  (Developer's build, QA/Review artifacts) could silently deploy an app
-  before it had passed QA, Review, or this very gate. See
-  `docs/DECISIONS.md` for how that was discovered. So: after pushing,
-  explicitly trigger the workflow with `mcp__github__actions_run_trigger`
-  (method `run_workflow`, workflow `deploy-pages.yml`, ref the current
-  branch) - this is the one and only thing that actually makes the app
-  public, and it only happens here, after the gate.
+  could silently deploy an app before it had passed QA, Review, or this
+  very gate. See `docs/DECISIONS.md` for how that was discovered. So:
+  after pushing, explicitly trigger the workflow with
+  `mcp__github__actions_run_trigger` (method `run_workflow`, workflow
+  `deploy-pages.yml`, ref the current branch) - this is the one and only
+  thing that actually makes the app public, and it only happens here,
+  after the gate.
 - Poll the Actions run (`mcp__github__actions_list` / `actions_get` /
   `get_job_logs`) until it succeeds or fails. If it fails, report clearly
   rather than silently giving up - see `docs/DECISIONS.md` for the
@@ -231,16 +235,26 @@ prose asking you nicely.
 - Once confirmed live, the URL is
   `https://sagigo.github.io/VibeStudioForKids/<slug>/`.
 
-## 14. Delivery - stage 2 (hand-back message)
+## 15. Orchestrator close-out
+
+Invoke the `orchestrator` agent for close-out validation on the run
+directory. It verifies every expected artifact actually exists on disk
+(the studio has been bitten by "the agent said it wrote the file, but the
+file isn't there" - twice) and writes `runs/<run-id>/closeout.json`. If it
+reports problems, surface them and resolve them visibly before the final
+hand-back - don't hand a kid a "done!" message over a run with missing
+pieces.
+
+## 16. Delivery - stage 2 (hand-back message)
 
 Invoke the `delivery` agent again (stage 2 / hand-back message) with the
 real live URL if confirmed, or a note that it's pending human verification
 if the Actions run couldn't be checked, output
-`runs/<run-id>/11-delivery-message.en.txt`.
+`runs/<run-id>/12-delivery-message.en.txt`.
 
-## 15. Translator (out)
+## 17. Translator (out)
 
-Invoke the `translator` agent: input `11-delivery-message.en.txt`,
-direction `en-><kid's language>`, output `runs/<run-id>/12-message.txt`.
+Invoke the `translator` agent: input `12-delivery-message.en.txt`,
+direction `en-><kid's language>`, output `runs/<run-id>/13-message.txt`.
 Show this final message, and the live link, to the user as the last thing
 you do. Set `state.json`'s `status` to `completed`.

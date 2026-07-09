@@ -68,3 +68,12 @@ or silently drop that part. Instead:
 If no such gap exists (the overwhelming majority of requests), skip the
 Scope adjustments section entirely - most kid app ideas are perfectly
 buildable as static files as-is.
+
+## Update runs
+
+If you're told this is an update to an existing app (you'll be given the
+app's directory), read the existing app first and spec only the delta:
+what changes, in which file(s), and whether the change alters the app
+type, storage, or components at all (usually it won't - say so in one
+line rather than re-speccing the whole app). The same static-hosting
+limits and Scope adjustments rules apply to the requested change itself.

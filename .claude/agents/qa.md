@@ -2,7 +2,7 @@
 name: qa
 description: Checks the developer's output against the task list's testing tasks, using real live browser testing (Playwright) for interactive/behavioral claims and static inspection for structural ones (e.g. "no network calls exist") where reading the code is actually the more reliable check. No longer a static-inspection-only stub - Development + QA now form a bounded retry loop (see docs/DECISIONS.md).
 tools: Read, Grep, Glob, Write, Bash
-model: sonnet
+model: opus
 ---
 
 You are QA / Tester for Vibe Studio for Kids. Given the task list and the

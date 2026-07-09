@@ -40,8 +40,12 @@ the `/studio-build` Skill (in `.claude/skills/studio-build/`):
 - **task-planner** — spec → ordered dev/testing tasks, mapped to the
   spec's own component breakdown; never schedules tasks that depend on
   later pipeline stages.
-- **developer** — builds the app for real (`build` mode) or applies
-  targeted fixes from a QA report (`fix` mode). Writes all kid-visible UI
+- **designer** — requirement + spec → a short per-app style spec
+  (palette, typography, layout, microcopy tone) that Developer
+  implements. Skipped on update runs.
+- **developer** — builds the app for real (`build` mode), applies
+  targeted fixes from a QA report (`fix` mode), or performs targeted
+  surgery on an existing app (`update` mode). Writes all kid-visible UI
   text in the kid's language, with correct RTL layout when applicable.
 - **qa** — tests for real: live headless-browser interaction (Playwright +
   bundled Chromium) for behavioral claims, static inspection for
@@ -52,6 +56,13 @@ the `/studio-build` Skill (in `.claude/skills/studio-build/`):
 - **delivery** — stage 1 actually runs the app locally and captures a
   screenshot for the human gate; stage 2 drafts the kid-facing hand-back
   message after explicit confirmation. Never deploys anything itself.
+
+Orchestrator also performs close-out validation at the end of every run
+(artifact-existence check by kind, written to `closeout.json`) before the
+final hand-back. There are two entry-point Skills: `/studio-build` for new
+apps and `/studio-update` for changing an existing app (same pipeline and
+gates; Developer runs in `update` mode, Tech Spec specs only the delta,
+and QA includes a regression check).
 
 Deployment is an explicit `workflow_dispatch` trigger invoked by the Skill
 after the human gate — never a side effect of a push (that exact accident

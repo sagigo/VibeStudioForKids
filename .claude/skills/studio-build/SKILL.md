@@ -213,22 +213,27 @@ prose asking you nicely.
   `apps/**`, which meant ordinary progress-commits made *during* the run
   could silently deploy an app before it had passed QA, Review, or this
   very gate. See `docs/DECISIONS.md` for how that was discovered. So:
-  after pushing, explicitly trigger the workflow with
-  `mcp__github__actions_run_trigger` (method `run_workflow`, workflow
-  `deploy-pages.yml`, ref the current branch) - this is the one and only
-  thing that actually makes the app public, and it only happens here,
-  after the gate.
-- Poll the Actions run (`mcp__github__actions_list` / `actions_get` /
-  `get_job_logs`) until it succeeds or fails. If it fails, report clearly
-  rather than silently giving up - see `docs/DECISIONS.md` for the
-  one-time repo/environment setup this can depend on.
-- **If the GitHub MCP tools are unavailable** (disconnected/need
-  re-auth): you can't trigger the deploy at all in this case (no
-  automatic fallback anymore, by design) - don't block on this or retry
-  the tool call in a loop. Say plainly that the app is committed and
-  ready but couldn't be deployed from here, and that re-running this step
-  (or a manual `workflow_dispatch` in the GitHub UI) once the tools
-  reconnect will actually make it public. Don't claim it's live when you
+  after pushing, explicitly trigger the workflow - this is the one and
+  only thing that actually makes the app public, and it only happens
+  here, after the gate. Use whichever tooling this environment has:
+  - GitHub MCP tools (Claude Code web): `mcp__github__actions_run_trigger`
+    (method `run_workflow`, workflow `deploy-pages.yml`, ref the current
+    branch).
+  - GitHub CLI (typical local install):
+    `gh workflow run deploy-pages.yml --ref <current branch>`.
+- Poll the Actions run until it succeeds or fails - MCP:
+  `mcp__github__actions_list` / `actions_get` / `get_job_logs`; CLI:
+  `gh run list --workflow=deploy-pages.yml --limit 1`, then
+  `gh run watch <run-id>`. If it fails, report clearly rather than
+  silently giving up - see `docs/DECISIONS.md` for the one-time
+  repo/environment setup this can depend on.
+- **If neither the GitHub MCP tools nor an authenticated `gh` CLI is
+  available**: you can't trigger the deploy at all (no automatic
+  fallback, by design) - don't block on this or retry in a loop. Say
+  plainly that the app is committed and ready but couldn't be deployed
+  from here, and that re-running this step (or a manual
+  `workflow_dispatch` in the GitHub UI's Actions tab) once tooling is
+  back will actually make it public. Don't claim it's live when you
   haven't triggered and verified it. Set `state.json`'s `status` to
   `halted_deploy_unverified` in this case so a future resume knows to
   pick up right here, not restart the whole run.

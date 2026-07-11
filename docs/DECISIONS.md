@@ -304,6 +304,26 @@ landing page (E), GitHub-side required-reviewer enforcement on the Pages
 environment (F), and a post-deploy smoke-test workflow step (G) were all
 offered and declined by the user this round.
 
+## Decision: the studio must run locally, not only in Claude Code web
+
+User's explicit requirement once real kid-PC usage came into view. What
+this means in practice (and what was changed to honor it):
+- Agent instructions locate tools per-environment instead of assuming the
+  cloud image: Playwright/Chromium paths are checked, not hardcoded;
+  `python3` vs `python` (Windows) vs `npx serve` are all acceptable for
+  the local static server. Claude Code on Windows shells out via Git
+  Bash, so Unix-style commands otherwise work.
+- The deploy step uses the GitHub MCP tools when present and falls back
+  to the `gh` CLI (`gh workflow run deploy-pages.yml`) locally. The
+  dispatch-only deploy rule is unchanged in both environments.
+- A project-scoped `.claude/settings.json` pre-approves the pipeline's
+  routine, known-safe operations (local test server, git add/commit/push,
+  workflow dispatch and watching) so a kid isn't interrupted by English
+  permission prompts mid-run. `git push` being pre-approved is safe
+  precisely because of the dispatch-only deploy decision - a push alone
+  can't publish anything.
+- `SETUP.md` documents both paths for a parent.
+
 ## Parked (not decided, not urgent)
 
 Left as notes for a future round, not active open questions:

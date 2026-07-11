@@ -102,6 +102,13 @@ happened once; see DECISIONS).
   say how to tell them apart (safety-check.md does).
 - Run artifacts live in `runs/<run-id>/`, numbered in pipeline order, with
   `state.json` as the live record of progress, gates, and halt reasons.
+- The studio runs in Claude Code web AND locally (Windows/macOS/Linux) -
+  see `SETUP.md`. Don't hardcode cloud-environment specifics into agent
+  instructions: Playwright/Chromium paths differ per environment (check,
+  don't assume), deployment uses the GitHub MCP tools when present and
+  the `gh` CLI otherwise, and `python3` is `python` on Windows (Claude
+  Code there shells out via Git Bash, so Unix-style commands otherwise
+  work).
 
 ## Status
 

@@ -59,10 +59,17 @@ app type.
 | Coin Jump Runner | Side-scrolling coin-collecting game with a charge-and-release jump (Hebrew UI) | [link](https://sagigo.github.io/VibeStudioForKids/coin-jump-runner/) |
 | Triangle Drawer | Geometry practice tool - enter any 3 known sides/angles, it solves and draws the rest (Hebrew UI) | [link](https://sagigo.github.io/VibeStudioForKids/triangle-drawer/) |
 
+## Getting started
+
+See `SETUP.md` — the studio runs either in Claude Code on the web (zero
+install) or locally on the kid's own PC (Windows/macOS/Linux). Entry
+points: `/studio-build` for a new app, `/studio-update` to change an
+existing one.
+
 ## Status
 
-All 10 phases of the original roadmap are implemented and validated —
+All 10 phases of the original roadmap are implemented and validated, plus
+a post-review improvement pass (Phase 11) and local-portability support —
 see `docs/ROADMAP.md` for what each phase delivered and
 `docs/DECISIONS.md` for the design decisions and the real bugs found and
-fixed along the way. The studio's entry point is the `/studio-build`
-Skill.
+fixed along the way.

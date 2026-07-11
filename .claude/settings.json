@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(date:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(cat:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(python3 -m http.server:*)",
+      "Bash(python3 -m json.tool:*)",
+      "Bash(python -m http.server:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(npx serve:*)",
+      "Bash(node:*)",
+      "Bash(npx playwright:*)",
+      "Bash(gh workflow run deploy-pages.yml:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run watch:*)",
+      "Bash(gh run view:*)",
+      "Edit(apps/**)",
+      "Edit(runs/**)"
+    ],
+    "deny": []
+  }
+}

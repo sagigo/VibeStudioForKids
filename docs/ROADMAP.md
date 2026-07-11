@@ -212,6 +212,21 @@ numeric-vs-pass/fail gate question resolved in favor of pass/fail.
 run's real artifacts. Not yet exercised in a full live run - the next
 `studio-build` / `studio-update` run is the real validation.
 
+## Phase 12 — Local portability
+**Goal:** the studio runs on a kid's own PC (Windows/macOS/Linux), not
+just in Claude Code web.
+**Scope landed:** environment-agnostic agent instructions (Playwright/
+Chromium located per-environment instead of hardcoded cloud paths;
+`python`/`python3`/`npx serve` variants; Windows runs through Git Bash);
+deploy step falls back to the `gh` CLI when the GitHub MCP tools aren't
+present; project `.claude/settings.json` pre-approves the pipeline's
+routine safe operations so a kid isn't interrupted by English permission
+prompts; parent-facing `SETUP.md` covering both the zero-install web
+option and the full local install including Windows specifics.
+**Status:** Done on paper, not yet exercised on a real local Windows/macOS
+machine - the first local run is the real validation (same honest caveat
+Phase 11 carries for its pipeline additions).
+
 ---
 
 All 10 originally-planned phases are done. The thin-slice-first approach

@@ -195,8 +195,43 @@ published the app hours before Review or the human gate, because the
 deploy workflow triggered on any push touching `apps/**` regardless of
 why. Fixed the same day it was found.
 
+## Phase 11 — Post-review improvements (vs. claude-sub-agent)
+**Goal:** structured review of the whole studio against the
+claude-sub-agent reference; obvious fixes applied directly, non-obvious
+changes picked explicitly by the user from a numbered list.
+**Scope landed:** stale docs fixed (README/AGENT.md/CLAUDE.md - fresh
+sessions weren't even loading AGENT.md before); task-planner/QA
+contradiction fixed; Developer now receives the requirement it's judged
+against; new `designer` agent producing a per-app style spec; new
+`studio-update` skill for changing existing apps (Developer `update`
+mode, delta tech specs, regression-aware QA); Developer+QA bumped to a
+stronger model; Orchestrator close-out validation (artifact-existence
+check + `closeout.json`) before every hand-back; the parked
+numeric-vs-pass/fail gate question resolved in favor of pass/fail.
+**Status:** Done. Designer and close-out validated against the Phase 10
+run's real artifacts. Not yet exercised in a full live run - the next
+`studio-build` / `studio-update` run is the real validation.
+
+## Phase 12 — Local portability
+**Goal:** the studio runs on a kid's own PC (Windows/macOS/Linux), not
+just in Claude Code web.
+**Scope landed:** environment-agnostic agent instructions (Playwright/
+Chromium located per-environment instead of hardcoded cloud paths;
+`python`/`python3`/`npx serve` variants; Windows runs through Git Bash);
+deploy step falls back to the `gh` CLI when the GitHub MCP tools aren't
+present; project `.claude/settings.json` pre-approves the pipeline's
+routine safe operations so a kid isn't interrupted by English permission
+prompts; parent-facing `SETUP.md` covering both the zero-install web
+option and the full local install including Windows specifics.
+**Status:** Done on paper, not yet exercised on a real local Windows/macOS
+machine - the first local run is the real validation (same honest caveat
+Phase 11 carries for its pipeline additions).
+
 ---
 
-Phases 2–8 are ordered by dependency and priority as understood today, but
-Phase 1 is expected to surface lessons that reorder or reshape them —
-that's the point of building the thin slice first.
+All 10 originally-planned phases are done. The thin-slice-first approach
+did what it was supposed to: nearly every phase surfaced at least one real
+bug or lesson that reshaped later work (all recorded in
+`docs/DECISIONS.md`). New phases discovered from here get appended below
+this line as the roadmap doc's own header instructs — don't renumber the
+finished ones.

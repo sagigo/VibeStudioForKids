@@ -1,5 +1,11 @@
 name: Deploy generated apps to GitHub Pages
 
+# Deliberately workflow_dispatch ONLY. A push trigger on apps/** once
+# deployed an app before QA/Review/the human gate had run, because a
+# progress-commit and an authorized release look identical to a push
+# trigger. Do not add a push trigger back - the studio-build Skill
+# dispatches this workflow explicitly after the Delivery gate.
+# See docs/DECISIONS.md: "Deploy must be an explicit trigger".
 on:
   workflow_dispatch: {}
 

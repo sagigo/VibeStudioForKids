@@ -25,7 +25,12 @@ default.
 - **Intake** — plain description → clear requirement, interactively.
 - **Technical Specification** — requirement → app type, stack, components.
 - **Task Planner** — spec → concrete development and testing tasks.
-- **Developer** — implementation.
+- **Designer** — requirement + spec → a short style spec (palette,
+  typography, layout, microcopy tone) so visual quality is a designed
+  input, not whatever Developer improvises. Added in the post-Phase-10
+  review (user's pick of the full-agent option over a checklist inside
+  Developer). Skipped on update runs.
+- **Developer** — implementation (build / fix / update modes).
 - **QA / Tester** — testing.
 - **Reviewer** — final check against the original requirement.
 - **Delivery** — local build/run, then remote deployment once confirmed.
@@ -256,11 +261,75 @@ in that language, with correct `dir="rtl"` layout when applicable, not just
 mirrored text. Retrofitted the already-deployed coin-jump-runner app to
 prove the fix works on a real, previously-English UI, not just new builds.
 
+## Decisions from the post-Phase-10 project review
+
+A structured review against claude-sub-agent, with the user picking from a
+numbered suggestion list (their exact picks: A:1, B:2, D, F:2, G:2, H:2, I).
+
+### Quality gates stay pass/fail-with-reason, not numeric (resolves the parked question)
+claude-sub-agent uses numeric thresholds (95%/80%/85%); we deliberately
+don't. At kid-app scale a score adds ceremony without changing outcomes -
+a 78% and a FAIL trigger the same retry loop, and a reasoned FAIL is more
+actionable than a number. User's explicit pick (A:1).
+
+### Designer is its own agent producing a style-spec artifact
+Between Task Planner and Developer (`07-style-spec.md`). Chosen over the
+lighter "checklist inside developer.md" option (B:2). Visual quality for a
+kid-facing app deserves a designed artifact that Review can compare
+against, same as every other pipeline concern. Skipped on update runs -
+an update preserves the app's existing look unless the change is about
+the look.
+
+### Updating an existing app is a first-class flow (`studio-update` skill)
+Same safety/translation/intake/QA/Review/gate pipeline, but Developer gets
+an `update` mode doing targeted surgery on the existing app, Tech Spec
+specs only the delta, and QA must include a regression check that existing
+behavior survived. Deploys to the same slug/URL.
+
+### Developer and QA run on a stronger model (opus); everything else stays sonnet
+User's pick (H:2). These two do the hardest work (real implementation,
+real live-browser verification); the classification/translation/planning
+roles have been reliable on sonnet across all live runs.
+
+### Close-out validation before the final hand-back
+Orchestrator gained a third job: verify every artifact the run's state
+implies actually exists on disk (by artifact kind, against the run's own
+stages list) and write `closeout.json`. Direct countermeasure to the
+observed "agent said it wrote the file, but the file isn't there" failure
+mode, which bit the studio twice.
+
+### Declined in the same review (so they don't get re-proposed as new ideas)
+Persisting QA's Playwright scripts as run artifacts (C), an apps gallery
+landing page (E), GitHub-side required-reviewer enforcement on the Pages
+environment (F), and a post-deploy smoke-test workflow step (G) were all
+offered and declined by the user this round.
+
+## Decision: the studio must run locally, not only in Claude Code web
+
+User's explicit requirement once real kid-PC usage came into view. What
+this means in practice (and what was changed to honor it):
+- Agent instructions locate tools per-environment instead of assuming the
+  cloud image: Playwright/Chromium paths are checked, not hardcoded;
+  `python3` vs `python` (Windows) vs `npx serve` are all acceptable for
+  the local static server. Claude Code on Windows shells out via Git
+  Bash, so Unix-style commands otherwise work.
+- The deploy step uses the GitHub MCP tools when present and falls back
+  to the `gh` CLI (`gh workflow run deploy-pages.yml`) locally. The
+  dispatch-only deploy rule is unchanged in both environments.
+- A project-scoped `.claude/settings.json` pre-approves the pipeline's
+  routine, known-safe operations (local test server, git add/commit/push,
+  workflow dispatch and watching) so a kid isn't interrupted by English
+  permission prompts mid-run. `git push` being pre-approved is safe
+  precisely because of the dispatch-only deploy decision - a push alone
+  can't publish anything.
+- `SETUP.md` documents both paths for a parent.
+
 ## Parked (not decided, not urgent)
 
 Left as notes for a future round, not active open questions:
 
-- Numeric quality gates (e.g. claude-sub-agent's 95%/85% thresholds) vs.
-  simple pass/fail with a reason.
 - Whether pipeline stage outputs are persisted as artifact files in a
   predictable per-run directory convention, or handled some other way.
+  (In practice `runs/<run-id>/` with numbered artifacts IS the convention
+  now; parked item kept only because the numbering itself still shifts
+  between studio versions.)

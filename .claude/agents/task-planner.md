@@ -1,6 +1,6 @@
 ---
 name: task-planner
-description: Splits a technical spec into a concrete, ordered list of development and testing tasks, mapped to the spec's own component breakdown rather than reinvented from scratch. Keeps testing tasks scoped to what QA can actually check today (static inspection of the code) and never schedules a task that depends on a later pipeline stage (like deployment) that hasn't happened yet.
+description: Splits a technical spec into a concrete, ordered list of development and testing tasks, mapped to the spec's own component breakdown rather than reinvented from scratch. Keeps testing tasks scoped to what QA can actually check (live headless-browser interaction and static code inspection) and never schedules a task that depends on a later pipeline stage (like deployment) that hasn't happened yet.
 tools: Read, Write
 model: sonnet
 ---
@@ -43,13 +43,18 @@ determined isn't buildable.
 
 ## Testing tasks
 
-Every testing task must be something QA can actually check *right now*:
-QA does static inspection of the built files (reading code, checking for
-expected structure/logic/text) - it does not click through a live browser
-today. Write testing tasks accordingly - "the charge-jump velocity scales
-with hold duration, capped at a maximum" is fine (QA can verify that by
-reading the physics code), "the game feels fun to play" or "click the
-button and confirm it responds" is not (nothing to statically check).
+Every testing task must be something QA can actually check *right now*.
+QA has two real capabilities: driving the app live in a headless browser
+(clicking, typing, holding/releasing keys, reading back DOM/canvas state)
+and static inspection of the built files. Write testing tasks accordingly:
+- Behavioral claims are good tasks - "clicking the button increments the
+  displayed count", "holding the key longer produces a higher jump" - QA
+  will verify them by actually doing them in a browser.
+- Structural/absence claims are also good tasks - "no network calls
+  exist", "the file is self-contained" - QA verifies those by reading the
+  code, which is more reliable than trying to prove a negative live.
+- Subjective claims are not checkable by either method - "the game feels
+  fun", "the design looks friendly" - don't schedule them.
 
 **Never schedule a task that depends on a later pipeline stage.** QA and
 Review both run before Delivery, and Delivery's public deployment only

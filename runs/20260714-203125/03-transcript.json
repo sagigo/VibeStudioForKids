@@ -1,0 +1,10 @@
+{
+  "original_idea_en": "General description:\nThere is a car that has a number on it. On the road there are exercises and I need to collect only the exercises that come out like the number on the car. Exercises like multiplication, division, addition and subtraction.\nGame flow:\n Need to turn right and left to take the correct exercises whose result is on the car\nHow to play with the keyboard:\nRight arrow to turn right, left arrow to turn left",
+  "qa_history": [
+    {"question": "I love this idea! I have some thoughts on how to build the game - do you want to help me decide a few fun details, or should I just figure them out and surprise you?", "answer": "Let's decide together"},
+    {"question": "What should happen if you accidentally drive into the WRONG exercise (one that doesn't match the number on your car)?", "answer": "Lose a life"},
+    {"question": "What kind of math problems should show up on the road?", "answer": "Addition and subtraction up to 100"},
+    {"question": "How does the game end and how do you win? Do you just try to survive and get the highest score, or is there a target to reach?", "answer": "Survive & score mode: play until you lose all 3 lives, score = number of correct exercises collected, and the game speeds up as your score goes up."},
+    {"question": "What should the road and world look like while you're racing and grabbing exercises?", "answer": "Space race - a glowing space highway with stars, planets, and neon-colored lanes"}
+  ]
+}

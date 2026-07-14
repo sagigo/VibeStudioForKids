@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>מירוץ החשבון בחלל</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #0a0e2a;
+    font-family: -apple-system, "Segoe UI", "Noto Sans Hebrew", Arial, sans-serif;
+    touch-action: none;
+    user-select: none;
+    color: #ffffff;
+  }
+  #game-wrap {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+  /* The game world is direction-neutral: left arrow is always physical-left,
+     lanes are laid out left-to-right regardless of the RTL chrome around it. */
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+  }
+
+  /* ---------- HUD (RTL reading order) ---------- */
+  .hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 16px;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .hud-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(10, 14, 42, 0.7);
+    border: 1px solid rgba(0, 229, 255, 0.35);
+    border-radius: 14px;
+    padding: 7px 14px;
+    box-shadow: 0 0 14px rgba(0, 229, 255, 0.18);
+    backdrop-filter: blur(2px);
+  }
+  .hud-label {
+    font-size: clamp(15px, 3.6vw, 20px);
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+  }
+  #score-display {
+    font-size: clamp(20px, 5vw, 26px);
+    font-weight: 800;
+    color: #00e5ff;
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
+    min-width: 1.5ch;
+    text-align: center;
+  }
+  .hearts {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    direction: ltr; /* keep the 3 hearts in a stable visual row */
+  }
+  .heart {
+    font-size: clamp(18px, 4.5vw, 24px);
+    line-height: 1;
+    transition: transform 0.15s ease, opacity 0.2s ease;
+  }
+  .heart.full { color: #ff4d6d; text-shadow: 0 0 8px rgba(255, 77, 109, 0.7); }
+  .heart.empty { color: rgba(255, 255, 255, 0.22); text-shadow: none; }
+
+  /* ---------- Fading how-to hint (non-blocking) ---------- */
+  #hint {
+    position: absolute;
+    top: 62px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 88vw;
+    text-align: center;
+    background: rgba(10, 14, 42, 0.72);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+    border-radius: 14px;
+    padding: 10px 16px;
+    font-size: clamp(13px, 3.2vw, 16px);
+    font-weight: 600;
+    line-height: 1.45;
+    color: #dfe9ff;
+    z-index: 6;
+    pointer-events: none;
+    animation: hintFade 6s ease forwards;
+  }
+  @keyframes hintFade {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+    12%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+    78%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* ---------- Touch steering buttons (physical L/R, not mirrored) ---------- */
+  .steer-btn {
+    position: absolute;
+    bottom: 22px;
+    width: clamp(62px, 16vw, 84px);
+    height: clamp(62px, 16vw, 84px);
+    border-radius: 50%;
+    background: rgba(10, 14, 42, 0.55);
+    border: 2px solid rgba(0, 229, 255, 0.5);
+    color: #00e5ff;
+    font-size: clamp(26px, 7vw, 34px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    cursor: pointer;
+    box-shadow: 0 0 16px rgba(0, 229, 255, 0.25);
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  .steer-btn:active { background: rgba(0, 229, 255, 0.22); transform: scale(0.94); }
+  #btn-left  { left: 18px; }   /* physical left  -> ArrowLeft  */
+  #btn-right { right: 18px; }  /* physical right -> ArrowRight */
+
+  /* ---------- Game Over overlay ---------- */
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(6, 8, 24, 0.72);
+    z-index: 10;
+    padding: 20px;
+    backdrop-filter: blur(3px);
+  }
+  .overlay.hidden { display: none; }
+  .panel {
+    background: linear-gradient(180deg, #141a3d, #0c1030);
+    border: 2px solid rgba(0, 229, 255, 0.45);
+    border-radius: 22px;
+    padding: 30px 34px 26px;
+    text-align: center;
+    max-width: 92vw;
+    box-shadow: 0 0 40px rgba(0, 229, 255, 0.25), 0 18px 40px rgba(0, 0, 0, 0.5);
+  }
+  .panel h1 {
+    margin: 0 0 4px;
+    font-size: clamp(24px, 6vw, 36px);
+    color: #ffd400;
+    text-shadow: 0 0 16px rgba(255, 212, 0, 0.55);
+  }
+  .panel .subtitle {
+    margin: 0 0 16px;
+    font-size: clamp(14px, 3.4vw, 18px);
+    color: #cfd8ff;
+    font-weight: 600;
+  }
+  .panel .score-label {
+    font-size: clamp(15px, 3.6vw, 20px);
+    color: #ffffff;
+    margin: 0 0 2px;
+    font-weight: 600;
+  }
+  .panel .score-hero {
+    font-size: clamp(52px, 16vw, 88px);
+    font-weight: 900;
+    color: #00e5ff;
+    line-height: 1.05;
+    margin: 0 0 20px;
+    text-shadow: 0 0 22px rgba(0, 229, 255, 0.65);
+  }
+  .btn {
+    font-family: inherit;
+    font-size: clamp(18px, 4.6vw, 24px);
+    font-weight: 800;
+    color: #0a0e2a;
+    background: linear-gradient(180deg, #5cffb0, #14d477);
+    border: none;
+    border-radius: 16px;
+    padding: 14px 34px;
+    cursor: pointer;
+    box-shadow: 0 6px 0 #0b9c54, 0 0 22px rgba(61, 255, 138, 0.5);
+    transition: transform 0.05s ease, box-shadow 0.05s ease;
+  }
+  .btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #0b9c54, 0 0 22px rgba(61, 255, 138, 0.5);
+  }
+</style>
+</head>
+<body>
+<div id="game-wrap">
+  <canvas id="game" dir="ltr"></canvas>
+
+  <!-- HUD: score on the right, lives on the left (RTL reading order) -->
+  <div class="hud">
+    <div class="hud-chip">
+      <span class="hud-label">ניקוד</span>
+      <span id="score-display">0</span>
+    </div>
+    <div class="hud-chip">
+      <span class="hearts" id="hearts"></span>
+    </div>
+  </div>
+
+  <div id="hint">חיצים ימינה/שמאלה מזיזים את הרכב בין המסלולים.<br>אספו את התרגיל ששווה למספר שעל הרכב!</div>
+
+  <!-- Touch steering (physical sides; keyboard is the primary control) -->
+  <div class="steer-btn" id="btn-left" aria-label="שמאלה">◀</div>
+  <div class="steer-btn" id="btn-right" aria-label="ימינה">▶</div>
+
+  <div class="overlay hidden" id="gameover-overlay">
+    <div class="panel">
+      <h1>טיסה טובה בחלל!</h1>
+      <p class="subtitle">עד הפעם הבאה, טייס/ת חלל!</p>
+      <p class="score-label">הניקוד שלך:</p>
+      <div class="score-hero" id="final-score">0</div>
+      <button class="btn" id="restart-btn">עוד סיבוב!</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Canvas setup ----------
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var wrap = document.getElementById('game-wrap');
+  var DPR = Math.min(window.devicePixelRatio || 1, 2);
+  var W = 0, H = 0; // logical (CSS) pixel dimensions
+
+  // ---------- Fixed config ----------
+  var LANES = 3;
+  var BASE_SPEED = 150;   // world px/s at score 0
+  var SPEED_PER_SCORE = 9;
+  var MAX_SPEED = 430;
+  var MAX_LIVES = 3;
+
+  // ---------- Layout (recomputed on resize) ----------
+  var roadWidth, roadX0, laneWidth, laneCenters = [], carY, tileH, tileW, ROW_GAP;
+
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function randInt(min, max) { return Math.floor(min + Math.random() * (max - min + 1)); }
+  function rand(min, max) { return min + Math.random() * (max - min); }
+
+  function resize() {
+    W = wrap.clientWidth;
+    H = wrap.clientHeight;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+
+    roadWidth = Math.min(W * 0.86, 540);
+    roadX0 = (W - roadWidth) / 2;
+    laneWidth = roadWidth / LANES;
+    laneCenters = [];
+    for (var i = 0; i < LANES; i++) laneCenters.push(roadX0 + laneWidth * (i + 0.5));
+    carY = H * 0.80;
+    tileH = clamp(H * 0.085, 46, 64);
+    tileW = Math.min(laneWidth * 0.82, 150);
+    ROW_GAP = clamp(H * 0.46, 200, 330);
+
+    carX = laneCenters[carLane]; // keep car centred in its lane across resizes
+    buildStarfield();
+  }
+
+  // ---------- Game state ----------
+  var state = 'playing'; // 'playing' | 'gameover'
+  var score = 0;
+  var lives = MAX_LIVES;
+  var target = 0;
+  var speed = BASE_SPEED;
+
+  var carLane = 1;            // 0 = leftmost lane (physical)
+  var carX = 0;              // animated x, glides toward laneCenters[carLane]
+  var tiles = [];            // {lane,rowId,y,a,b,op,answer,resolved,carHit,hit,hitColor,dead}
+  var rowCounter = 0;
+  var spawnAccumulator = 0;
+
+  var particles = [];
+  var flash = { color: null, a: 0 };
+  var popup = { text: '', color: '#fff', a: 0, y: 0 };
+
+  var stars = [];
+  var planets = [];
+  var worldScroll = 0; // for parallax dashes
+
+  // ---------- DOM refs ----------
+  var scoreDisplay = document.getElementById('score-display');
+  var heartsEl = document.getElementById('hearts');
+  var gameoverOverlay = document.getElementById('gameover-overlay');
+  var finalScoreEl = document.getElementById('final-score');
+  var hintEl = document.getElementById('hint');
+
+  var CORRECT_WORDS = ['מעולה!', 'יש!', 'אלוף/ה!', 'כל הכבוד!', 'וואו!'];
+  var WRONG_WORD = 'אופס, ניסיון הבא!';
+
+  // ---------- Starfield / planets ----------
+  function buildStarfield() {
+    stars = [];
+    var count = Math.round((W * H) / 5500);
+    count = clamp(count, 60, 220);
+    for (var i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: rand(0.6, 2.2),
+        layer: rand(0.3, 1),        // parallax factor
+        alpha: rand(0.3, 1)
+      });
+    }
+    planets = [
+      { x: W * 0.16, y: H * 0.24, r: clamp(W * 0.07, 26, 60), c1: '#4a5bd0', c2: '#232a6b', drift: 8 },
+      { x: W * 0.86, y: H * 0.14, r: clamp(W * 0.045, 16, 40), c1: '#ff8fb0', c2: '#7a2a52', drift: 5 }
+    ];
+  }
+
+  // ---------- Exercise generation ----------
+  // Correct tile: an add/sub exercise whose result equals `target` (0-100 range).
+  function makeExercise(t) {
+    if (Math.random() < 0.5) {
+      // addition: a + b = t, both operands in range, avoid trivial 0/T when possible
+      var lowA = 0, highA = t;
+      if (t >= 2) { lowA = 1; highA = t - 1; }
+      var a = randInt(lowA, highA);
+      return { a: a, b: t - a, op: '+', answer: t };
+    } else {
+      // subtraction: a - b = t, a <= 100
+      var maxB = 100 - t;
+      var lowB = 0, highB = maxB;
+      if (maxB >= 2) { lowB = 1; highB = maxB; }
+      var b = randInt(lowB, highB);
+      return { a: t + b, b: b, op: '−', answer: t };
+    }
+  }
+
+  // Wrong tile: a valid add/sub exercise whose result is in 0-100 but != target.
+  function makeWrongExercise(t) {
+    for (var guard = 0; guard < 200; guard++) {
+      if (Math.random() < 0.5) {
+        var a = randInt(1, 99);
+        var b = randInt(1, 100 - a);
+        var ans = a + b;
+        if (ans !== t) return { a: a, b: b, op: '+', answer: ans };
+      } else {
+        var a2 = randInt(1, 100);
+        var b2 = randInt(1, a2);
+        var ans2 = a2 - b2;
+        if (ans2 !== t) return { a: a2, b: b2, op: '−', answer: ans2 };
+      }
+    }
+    // Fallback (practically never hit): shift by 1.
+    var alt = t + (t < 100 ? 1 : -1);
+    return { a: alt, b: 0, op: '+', answer: alt };
+  }
+
+  function pickNewTarget() {
+    var t;
+    do { t = randInt(2, 98); } while (t === target);
+    target = t;
+  }
+
+  // ---------- Tile spawning ----------
+  function spawnRow(startY) {
+    var rowId = ++rowCounter;
+    var correctLane = randInt(0, LANES - 1);
+    var wrongProb = clamp(0.5 + score * 0.03, 0.5, 0.9);
+    for (var lane = 0; lane < LANES; lane++) {
+      var isCorrect = (lane === correctLane);
+      if (!isCorrect && Math.random() > wrongProb) continue; // leave a safe empty lane
+      var ex = isCorrect ? makeExercise(target) : makeWrongExercise(target);
+      tiles.push({
+        lane: lane, rowId: rowId, y: startY,
+        a: ex.a, b: ex.b, op: ex.op, answer: ex.answer,
+        resolved: false, carHit: false, hit: 0, hitColor: null, dead: false
+      });
+    }
+  }
+
+  // When the target changes, refresh every upcoming (unresolved) row so that
+  // exactly one tile per row matches the NEW target -> solvability preserved,
+  // and no tile that was correct a moment ago suddenly penalises the player.
+  function reassignTilesForTarget() {
+    var rows = {};
+    for (var i = 0; i < tiles.length; i++) {
+      var tl = tiles[i];
+      if (tl.resolved) continue;
+      (rows[tl.rowId] = rows[tl.rowId] || []).push(tl);
+    }
+    Object.keys(rows).forEach(function (id) {
+      var group = rows[id];
+      var correctIdx = randInt(0, group.length - 1);
+      for (var i = 0; i < group.length; i++) {
+        var ex = (i === correctIdx) ? makeExercise(target) : makeWrongExercise(target);
+        group[i].a = ex.a; group[i].b = ex.b; group[i].op = ex.op; group[i].answer = ex.answer;
+      }
+    });
+  }
+
+  // ---------- Feedback helpers ----------
+  function burst(x, y, colors, n) {
+    for (var i = 0; i < n; i++) {
+      var ang = rand(0, Math.PI * 2);
+      var sp = rand(70, 260);
+      particles.push({
+        x: x, y: y,
+        vx: Math.cos(ang) * sp,
+        vy: Math.sin(ang) * sp,
+        life: rand(0.35, 0.8), maxLife: 0.8,
+        size: rand(2.5, 5.5),
+        color: colors[randInt(0, colors.length - 1)]
+      });
+    }
+  }
+  function setFlash(color, a) { flash.color = color; flash.a = a; }
+  function setPopup(text, color) {
+    popup.text = text; popup.color = color; popup.a = 1; popup.y = carY - tileH;
+  }
+
+  // ---------- Collisions / scoring ----------
+  function correctCollect(tile) {
+    tile.carHit = true; tile.hit = 0.28; tile.hitColor = '#ffd400';
+    score += 1;
+    scoreDisplay.textContent = String(score);
+    speed = clamp(BASE_SPEED + score * SPEED_PER_SCORE, BASE_SPEED, MAX_SPEED);
+    burst(laneCenters[tile.lane], carY, ['#3dff8a', '#ffd400', '#ffffff'], 22);
+    setFlash('61, 255, 138', 0.35);
+    setPopup(CORRECT_WORDS[randInt(0, CORRECT_WORDS.length - 1)], '#3dff8a');
+    pickNewTarget();
+    reassignTilesForTarget();
+  }
+
+  function wrongHit(tile) {
+    tile.carHit = true; tile.hit = 0.28; tile.hitColor = '#ff4d6d';
+    lives -= 1;
+    updateHearts();
+    burst(laneCenters[tile.lane], carY, ['#ff4d6d', '#ffffff'], 18);
+    setFlash('255, 77, 109', 0.4);
+    setPopup(WRONG_WORD, '#ff4d6d');
+    if (lives <= 0) { lives = 0; updateHearts(); endGame(); }
+  }
+
+  function updateHearts() {
+    var html = '';
+    for (var i = 0; i < MAX_LIVES; i++) {
+      if (i < lives) html += '<span class="heart full">♥</span>';
+      else html += '<span class="heart empty">♡</span>';
+    }
+    heartsEl.innerHTML = html;
+  }
+
+  // ---------- Update ----------
+  function update(dt) {
+    // Ambient starfield keeps drifting even on the game-over screen (not gameplay).
+    for (var s = 0; s < stars.length; s++) {
+      var st = stars[s];
+      st.y += (state === 'playing' ? speed : 40) * st.layer * dt * 0.5;
+      if (st.y > H + 2) { st.y = -2; st.x = Math.random() * W; }
+    }
+
+    // Particles fade out regardless of state (so the last burst finishes).
+    for (var p = particles.length - 1; p >= 0; p--) {
+      var pt = particles[p];
+      pt.x += pt.vx * dt; pt.y += pt.vy * dt;
+      pt.vx *= 0.94; pt.vy *= 0.94;
+      pt.life -= dt;
+      if (pt.life <= 0) particles.splice(p, 1);
+    }
+    if (flash.a > 0) flash.a = Math.max(0, flash.a - dt * 1.6);
+    if (popup.a > 0) { popup.a = Math.max(0, popup.a - dt * 0.9); popup.y -= dt * 40; }
+
+    if (state !== 'playing') return;
+
+    worldScroll += speed * dt;
+
+    // Car glide toward its lane centre.
+    carX += (laneCenters[carLane] - carX) * Math.min(1, dt * 14);
+
+    // Spawn rows at fixed world spacing (rate scales naturally with speed).
+    spawnAccumulator += speed * dt;
+    while (spawnAccumulator >= ROW_GAP) {
+      spawnAccumulator -= ROW_GAP;
+      spawnRow(-tileH);
+    }
+
+    // Move + resolve tiles.
+    for (var i = 0; i < tiles.length; i++) {
+      var t = tiles[i];
+      t.y += speed * dt;
+      if (t.hit > 0) {
+        t.hit -= dt;
+        if (t.hit <= 0 && t.carHit) t.dead = true;
+      }
+      if (!t.resolved && t.y >= carY) {
+        t.resolved = true;
+        if (t.lane === carLane) {
+          if (t.answer === target) correctCollect(t);
+          else wrongHit(t);
+        }
+        // tiles in other lanes just pass by harmlessly
+      }
+    }
+
+    // Cleanup.
+    tiles = tiles.filter(function (t) { return !t.dead && t.y < H + tileH * 2; });
+
+    // Safety net for the solvability guarantee: if nothing correct is heading
+    // for the car, drop in a fresh row immediately.
+    var hasCorrectAhead = false;
+    for (var k = 0; k < tiles.length; k++) {
+      if (!tiles[k].resolved && tiles[k].answer === target) { hasCorrectAhead = true; break; }
+    }
+    if (!hasCorrectAhead) spawnRow(-tileH);
+  }
+
+  // ---------- Rendering ----------
+  function drawBackground() {
+    ctx.fillStyle = '#0a0e2a';
+    ctx.fillRect(0, 0, W, H);
+
+    // faint nebula glow for depth
+    var neb = ctx.createRadialGradient(W * 0.7, H * 0.35, 0, W * 0.7, H * 0.35, Math.max(W, H) * 0.55);
+    neb.addColorStop(0, 'rgba(36, 27, 77, 0.55)');
+    neb.addColorStop(1, 'rgba(36, 27, 77, 0)');
+    ctx.fillStyle = neb;
+    ctx.fillRect(0, 0, W, H);
+
+    // planets
+    for (var i = 0; i < planets.length; i++) {
+      var pl = planets[i];
+      var g = ctx.createRadialGradient(pl.x - pl.r * 0.3, pl.y - pl.r * 0.3, pl.r * 0.2, pl.x, pl.y, pl.r);
+      g.addColorStop(0, pl.c1);
+      g.addColorStop(1, pl.c2);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(pl.x, pl.y, pl.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // stars
+    for (var s = 0; s < stars.length; s++) {
+      var st = stars[s];
+      ctx.globalAlpha = st.alpha;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawRoad() {
+    // subtle darker road panel
+    ctx.fillStyle = 'rgba(8, 10, 32, 0.55)';
+    ctx.fillRect(roadX0, 0, roadWidth, H);
+
+    // neon lane dividers (including outer edges) with moving dashes
+    ctx.save();
+    ctx.lineCap = 'round';
+    var dashOffset = worldScroll % 46;
+    for (var i = 0; i <= LANES; i++) {
+      var x = roadX0 + laneWidth * i;
+      // outer glow
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.9)';
+      ctx.shadowColor = 'rgba(0, 229, 255, 0.9)';
+      ctx.shadowBlur = 14;
+      ctx.lineWidth = (i === 0 || i === LANES) ? 3 : 2;
+      ctx.setLineDash((i === 0 || i === LANES) ? [] : [24, 22]);
+      ctx.lineDashOffset = -dashOffset;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.setLineDash([]);
+    ctx.shadowBlur = 0;
+  }
+
+  function roundRectPath(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  var exerciseFontCache = 0;
+  function exerciseFontSize() {
+    if (exerciseFontCache) return exerciseFontCache;
+    exerciseFontCache = Math.round(clamp(laneWidth * 0.3, 18, 30));
+    return exerciseFontCache;
+  }
+
+  function drawTiles() {
+    var baseFont = exerciseFontSize();
+    for (var i = 0; i < tiles.length; i++) {
+      var t = tiles[i];
+      if (t.y < -tileH || t.y > H + tileH) continue;
+      var cx = laneCenters[t.lane];
+      var scale = 1;
+      if (t.carHit && t.hit > 0) scale = 1 + (0.28 - t.hit) * 1.2; // pop on hit
+
+      ctx.save();
+      ctx.translate(cx, t.y);
+      ctx.scale(scale, scale);
+
+      // panel
+      roundRectPath(-tileW / 2, -tileH / 2, tileW, tileH, 12);
+      ctx.fillStyle = 'rgba(10, 14, 42, 0.92)';
+      ctx.fill();
+
+      // border: neutral while approaching; gold/red only at the moment of a hit
+      if (t.carHit && t.hit > 0) {
+        ctx.strokeStyle = t.hitColor;
+        ctx.shadowColor = t.hitColor;
+        ctx.shadowBlur = 20;
+        ctx.lineWidth = 3.5;
+      } else {
+        ctx.strokeStyle = 'rgba(150, 178, 255, 0.6)';
+        ctx.shadowColor = 'rgba(120, 150, 255, 0.4)';
+        ctx.shadowBlur = 6;
+        ctx.lineWidth = 2;
+      }
+      roundRectPath(-tileW / 2, -tileH / 2, tileW, tileH, 12);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // exercise text (digits always LTR)
+      var text = t.a + ' ' + t.op + ' ' + t.b;
+      var fs = baseFont;
+      ctx.font = '700 ' + fs + 'px -apple-system, "Segoe UI", Arial, sans-serif';
+      while (ctx.measureText(text).width > tileW * 0.86 && fs > 12) {
+        fs -= 1;
+        ctx.font = '700 ' + fs + 'px -apple-system, "Segoe UI", Arial, sans-serif';
+      }
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(text, 0, 1);
+
+      ctx.restore();
+    }
+  }
+
+  function drawCar() {
+    var x = carX, y = carY;
+    var bodyW = Math.min(laneWidth * 0.6, 78);
+    var bodyH = bodyW * 1.15;
+    var tilt = clamp((laneCenters[carLane] - carX) * -0.006, -0.25, 0.25);
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(tilt);
+
+    // engine trail (behind car = below, since we race "upward")
+    var trailGrad = ctx.createLinearGradient(0, bodyH * 0.4, 0, bodyH * 1.5);
+    trailGrad.addColorStop(0, 'rgba(0, 229, 255, 0.85)');
+    trailGrad.addColorStop(1, 'rgba(0, 229, 255, 0)');
+    ctx.fillStyle = trailGrad;
+    var flick = rand(0.8, 1.2);
+    ctx.beginPath();
+    ctx.moveTo(-bodyW * 0.22, bodyH * 0.42);
+    ctx.lineTo(bodyW * 0.22, bodyH * 0.42);
+    ctx.lineTo(0, bodyH * (0.95 + 0.35 * flick));
+    ctx.closePath();
+    ctx.fill();
+
+    // body glow
+    ctx.shadowColor = 'rgba(0, 229, 255, 0.8)';
+    ctx.shadowBlur = 18;
+
+    // car body (nose up)
+    var bg = ctx.createLinearGradient(0, -bodyH / 2, 0, bodyH / 2);
+    bg.addColorStop(0, '#4be0ff');
+    bg.addColorStop(1, '#1c6fd6');
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.moveTo(0, -bodyH * 0.55);                  // nose
+    ctx.quadraticCurveTo(bodyW * 0.5, -bodyH * 0.15, bodyW * 0.42, bodyH * 0.35);
+    ctx.lineTo(bodyW * 0.28, bodyH * 0.45);
+    ctx.lineTo(-bodyW * 0.28, bodyH * 0.45);
+    ctx.lineTo(-bodyW * 0.42, bodyH * 0.35);
+    ctx.quadraticCurveTo(-bodyW * 0.5, -bodyH * 0.15, 0, -bodyH * 0.55);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // fins
+    ctx.fillStyle = '#0e4fa0';
+    ctx.beginPath();
+    ctx.moveTo(-bodyW * 0.42, bodyH * 0.1);
+    ctx.lineTo(-bodyW * 0.62, bodyH * 0.4);
+    ctx.lineTo(-bodyW * 0.28, bodyH * 0.42);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(bodyW * 0.42, bodyH * 0.1);
+    ctx.lineTo(bodyW * 0.62, bodyH * 0.4);
+    ctx.lineTo(bodyW * 0.28, bodyH * 0.42);
+    ctx.closePath();
+    ctx.fill();
+
+    // gold number plate with the target number
+    var plateW = bodyW * 0.72, plateH = bodyH * 0.42;
+    roundRectPath(-plateW / 2, -plateH / 2 + bodyH * 0.02, plateW, plateH, 8);
+    ctx.fillStyle = 'rgba(10, 14, 42, 0.85)';
+    ctx.fill();
+    ctx.strokeStyle = '#ffd400';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = 'rgba(255, 212, 0, 0.7)';
+    ctx.shadowBlur = 12;
+    roundRectPath(-plateW / 2, -plateH / 2 + bodyH * 0.02, plateW, plateH, 8);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    var numFont = Math.round(clamp(plateH * 0.72, 22, 36));
+    ctx.font = '800 ' + numFont + 'px -apple-system, "Segoe UI", Arial, sans-serif';
+    ctx.fillStyle = '#ffd400';
+    ctx.shadowColor = 'rgba(255, 212, 0, 0.6)';
+    ctx.shadowBlur = 8;
+    ctx.fillText(String(target), 0, bodyH * 0.02 + 1);
+    ctx.shadowBlur = 0;
+
+    ctx.restore();
+  }
+
+  function drawParticles() {
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      ctx.globalAlpha = clamp(p.life / p.maxLife, 0, 1);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawFlashAndPopup() {
+    if (flash.a > 0 && flash.color) {
+      ctx.fillStyle = 'rgba(' + flash.color + ',' + (flash.a * 0.5) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+    if (popup.a > 0 && popup.text) {
+      ctx.save();
+      ctx.globalAlpha = clamp(popup.a, 0, 1);
+      var fs = Math.round(clamp(H * 0.045, 24, 40));
+      ctx.font = '800 ' + fs + 'px -apple-system, "Segoe UI", "Noto Sans Hebrew", Arial, sans-serif';
+      ctx.fillStyle = popup.color;
+      ctx.shadowColor = popup.color;
+      ctx.shadowBlur = 16;
+      ctx.fillText(popup.text, W / 2, popup.y);
+      ctx.restore();
+    }
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+    drawBackground();
+    drawRoad();
+    drawTiles();
+    drawCar();
+    drawParticles();
+    drawFlashAndPopup();
+  }
+
+  // ---------- Main loop ----------
+  var lastTime = null;
+  function frame(now) {
+    if (lastTime === null) lastTime = now;
+    var dt = (now - lastTime) / 1000;
+    dt = clamp(dt, 0, 0.05);
+    lastTime = now;
+    update(dt);
+    render();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- Input ----------
+  function moveLeft() {
+    if (state !== 'playing') return;
+    carLane = clamp(carLane - 1, 0, LANES - 1);
+  }
+  function moveRight() {
+    if (state !== 'playing') return;
+    carLane = clamp(carLane + 1, 0, LANES - 1);
+  }
+
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); moveLeft(); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); moveRight(); }
+    else if ((e.key === 'Enter' || e.key === ' ') && state === 'gameover') {
+      e.preventDefault(); restartGame();
+    }
+  });
+
+  function bindHold(el, fn) {
+    el.addEventListener('click', function (e) { e.preventDefault(); fn(); });
+    el.addEventListener('touchstart', function (e) { e.preventDefault(); fn(); }, { passive: false });
+  }
+  bindHold(document.getElementById('btn-left'), moveLeft);
+  bindHold(document.getElementById('btn-right'), moveRight);
+
+  document.getElementById('restart-btn').addEventListener('click', function (e) {
+    e.preventDefault();
+    restartGame();
+  });
+
+  // ---------- State transitions ----------
+  function resetState() {
+    state = 'playing';
+    score = 0;
+    lives = MAX_LIVES;
+    speed = BASE_SPEED;
+    carLane = 1;
+    carX = laneCenters[carLane];
+    tiles = [];
+    particles = [];
+    rowCounter = 0;
+    spawnAccumulator = 0;
+    worldScroll = 0;
+    flash.a = 0;
+    popup.a = 0;
+    exerciseFontCache = 0;
+    target = 0;
+    pickNewTarget();
+    spawnRow(-tileH);        // first row present immediately (has a correct tile)
+    scoreDisplay.textContent = '0';
+    updateHearts();
+  }
+
+  function endGame() {
+    if (state === 'gameover') return;
+    state = 'gameover';
+    finalScoreEl.textContent = String(score);
+    gameoverOverlay.classList.remove('hidden');
+  }
+
+  function restartGame() {
+    gameoverOverlay.classList.add('hidden');
+    resetState();
+  }
+
+  window.addEventListener('resize', function () {
+    exerciseFontCache = 0;
+    resize();
+  });
+
+  // ---------- Init ----------
+  resize();
+  resetState();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

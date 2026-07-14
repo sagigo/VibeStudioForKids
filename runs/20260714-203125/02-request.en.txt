@@ -1,0 +1,6 @@
+General description:
+There is a car that has a number on it. On the road there are exercises and I need to collect only the exercises that come out like the number on the car. Exercises like multiplication, division, addition and subtraction.
+Game flow:
+ Need to turn right and left to take the correct exercises whose result is on the car
+How to play with the keyboard:
+Right arrow to turn right, left arrow to turn left
